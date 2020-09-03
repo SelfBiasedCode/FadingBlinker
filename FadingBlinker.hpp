@@ -109,9 +109,15 @@ class FadingBlinker
 	static const uint8_t LEFT_ACTIVE = 1;
 	static const uint8_t RIGHT_ACTIVE = 2;
 	static const uint8_t BOTH_ACTIVE = 3;
+	
+	// minimum timer value for glitch-free operation
+	// FIXME: This is later on used as a table index rather than an actual timer value
 	static const uint8_t MIN_VAL = 0x1A; 
 	
 	private:
+	
+	// register names are dependent on platform
+	#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 	inline void m_setupTimer()
 	{
 		m_currVal = MIN_VAL;
@@ -162,6 +168,60 @@ class FadingBlinker
 		// set timer value
 		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
 	}
+	
+	#elif defined (__AVR_ATmega4809__)
+	
+	inline void m_setupTimer()
+	{
+		m_currVal = MIN_VAL;
+		m_currTimerDirUp = true;
+		
+		// interrupts for COMPA and COMPB
+		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
+		
+		// prescaler: 1
+		TCCR1B = (1 << CS10);// | (1 << CS10);
+		
+		// CTC mode
+		TCCR1A = 0x0000;
+		TCCR1B |= ( 1 << WGM12);
+		
+		// CTC Limit
+		OCR1A = m_maxOCR1A;
+	}
+	 
+	inline void m_advanceTimer()
+	{
+		// calculate new value
+		if (m_currTimerDirUp)
+		{
+			if (m_currVal < 0xFF)
+			{
+				m_currVal++;
+			}
+			else
+			{
+				m_currTimerDirUp = false;
+			}
+		}
+		
+		if (!m_currTimerDirUp)
+		{
+			if (m_currVal > MIN_VAL)
+			{
+				m_currVal--;
+			}
+			else
+			{
+				m_currTimerDirUp = true;
+				m_currVal++; // necessary because the first if() was missed
+			}
+		}
+		
+		// set timer value
+		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
+	}
+	#endif
 	
 	// private members
 	uint8_t m_leftPin;
