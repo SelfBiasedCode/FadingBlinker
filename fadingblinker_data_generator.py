@@ -37,7 +37,7 @@ class gammacalc:
 		result += "#ifndef GAMMA_VAL_H\n"
 		result += "#define GAMMA_VAL_H\n\n"
 		result += "// this array contains {0} timer values plus the TOP value for the timer\n".format(math.floor(math.pow(2, self.bits_in)))
-		result += "static const uint{0}_t PROGMEM gammadata[] = {{".format(self.bits_out)
+		result += "static const uint{0}_t PROGMEM fadingblinker_data[] = {{".format(self.bits_out)
 		
 		# add gamma values
 		maxinputval = math.floor(math.pow(2, self.bits_in) - 1)
@@ -62,4 +62,4 @@ class gammacalc:
 # entry point for standalone execution
 if __name__ == "__main__":
 	gamma = gammacalc()
-	gamma.output_to_file("gammadata.hpp")
+	gamma.output_to_file("fadingblinker_data.hpp")

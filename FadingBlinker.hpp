@@ -16,7 +16,7 @@ ISR(TIMER1_COMPA_vect)
 #define FADING_BLINKER_H
 
 #include "Arduino.h"
-#include "gammadata.hpp"           
+#include "fadingblinker_data.hpp"           
 
 class FadingBlinker
 {
@@ -33,7 +33,7 @@ class FadingBlinker
 		digitalWrite(m_leftPin, HIGH);
 		digitalWrite(m_rightPin, HIGH);
 		
-		m_maxOCR1A = pgm_read_word_near(gammadata + 255);
+		m_maxOCR1A = pgm_read_word_near(fadingblinker_data + 255);
 
 	}
 	
@@ -160,7 +160,7 @@ class FadingBlinker
 		}
 		
 		// set timer value
-		OCR1B = pgm_read_word_near(gammadata + m_currVal);
+		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
 	}
 	
 	// private members
