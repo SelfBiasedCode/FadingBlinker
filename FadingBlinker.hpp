@@ -8,7 +8,7 @@ class FadingBlinker
 {
 	public:
 	
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin):m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_brightnessState(INACTIVE), m_currTimerDirUp(true)
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin):m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(INACTIVE), m_brightnessState(UP)
 	{
 	{
 		// set direction registers
@@ -21,8 +21,9 @@ class FadingBlinker
 		
 		// TODO: Use a pointer
 		m_maxOCR1A = pgm_read_word_near(fadingblinker_data + 255);
-		m_holdOff = pgm_read_word_near(fadingblinker_data + 256);
-		m_holdOn = pgm_read_word_near(fadingblinker_data + 257);
+		m_holdOff = (uint8_t) pgm_read_word_near(fadingblinker_data + 256);
+		m_holdOn = (uint8_t) pgm_read_word_near(fadingblinker_data + 257);
+		m_buzzerFreq = pgm_read_word_near(fadingblinker_data + 258);
 	}
 
 	inline void activateLeft()
@@ -106,8 +107,8 @@ class FadingBlinker
 	inline void m_setupTimer()
 	{
 		m_currVal = MIN_VAL;
-		m_currTimerDirUp = true;
-
+		m_brightnessState = UP;
+		
 		// interrupts for COMPA and COMPB
 		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
 
@@ -136,6 +137,7 @@ class FadingBlinker
 					// this implies that ON holding time is at least 1 cycle
 					m_brightnessState = ON;
 					m_holdCounter = m_holdOn;
+					tone(m_buzzerPin, m_buzzerFreq);
 				}
 				break;
 			
@@ -147,6 +149,7 @@ class FadingBlinker
 					if (m_holdCounter == 0)
 					{
 						m_brightnessState = DOWN;
+						noTone(m_buzzerPin);
 					}
 				}
 				break;
@@ -200,13 +203,13 @@ class FadingBlinker
 	uint8_t m_holdCounter;
 	
 	// constants
-	
 	bool m_currTimerDirUp;
 	uint8_t m_currVal;
 	uint16_t m_maxOCR1A;
 	uint8_t m_holdOn;
 	uint8_t m_holdOff;
-	
+	uint8_t m_buzzerPin;
+	uint16_t m_buzzerFreq;
 
 };
 #endif
