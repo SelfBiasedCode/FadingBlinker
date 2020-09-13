@@ -2,9 +2,10 @@
 
 #define ledPin1 2
 #define ledPin2 3
+#define buzzerPin 4
 
 // instantiate FadingBlinker
-FadingBlinker blinker(ledPin1, ledPin2);
+FadingBlinker blinker(ledPin1, ledPin2, buzzerPin);
 
 void setup() {}
 

@@ -37,7 +37,9 @@ static const uint16_t PROGMEM fadingblinker_data[] =
 // Off cycles 
 	20,
 // On cycles 
-	20
+	20,
+// Buzzer frequency [Hz]
+	440
 };
 
 #endif

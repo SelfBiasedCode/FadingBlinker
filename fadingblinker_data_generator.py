@@ -2,13 +2,15 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, bits_in=8, bits_out=16, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20):
+    def __init__(self, bits_in=8, bits_out=16, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20,
+                 tone_frequency_hz = 440):
         self.bits_in = bits_in
         self.bits_out = bits_out
         self.top = top
+        self.gamma = gamma
+        self.tone_freq = tone_frequency_hz
         self.off_cycles = off_cycles
         self.on_cycles = on_cycles
-        self.gamma = gamma
         self.output = []
 
     def calc(self):
@@ -32,7 +34,7 @@ class GammaTableCalc:
         result = "/* PWM values and constants for FadingBlinker */\n\n"
         result += "#ifndef FADINGBLINKER_DATA_H\n"
         result += "#define FADINGBLINKER_DATA_H\n"
-        result += "\nstatic const uint{0}_t PROGMEM fadingblinker_data[] =\n{{\n".format(self.bits_out)
+        result += "\nstatic const uint16_t PROGMEM fadingblinker_data[] =\n{\n"
         result += "//{0} timer values\n".format(math.floor(math.pow(2, self.bits_in)))
 
         # add gamma values
@@ -57,7 +59,10 @@ class GammaTableCalc:
         result += "\t{0},".format(self.off_cycles)
 
         result += "\n// On cycles \n"
-        result += "\t{0}".format(self.on_cycles)
+        result += "\t{0},".format(self.on_cycles)
+
+        result += "\n// Buzzer frequency [Hz]\n"
+        result += "\t{0}".format(self.tone_freq)
 
         # add tail
         result += "\n};\n\n"
