@@ -6,9 +6,10 @@
 
 class FadingBlinker
 {
-public:
-
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_currState(INACTIVE), m_currTimerDirUp(true)
+	public:
+	
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin):m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_brightnessState(INACTIVE), m_currTimerDirUp(true)
+	{
 	{
 		// set direction registers
 		pinMode(m_leftPin, OUTPUT);
@@ -17,94 +18,90 @@ public:
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
 		digitalWrite(m_rightPin, HIGH);
-
+		
+		// TODO: Use a pointer
 		m_maxOCR1A = pgm_read_word_near(fadingblinker_data + 255);
+		m_holdOff = pgm_read_word_near(fadingblinker_data + 256);
+		m_holdOn = pgm_read_word_near(fadingblinker_data + 257);
 	}
 
 	inline void activateLeft()
-	{
-		m_currState = LEFT_ACTIVE;
+	{ 
+		m_directionState = LEFT_ACTIVE;
 		m_setupTimer();
 	}
 
 	inline void activateRight()
 	{
-		m_currState = RIGHT_ACTIVE;
+		m_directionState = RIGHT_ACTIVE;
 		m_setupTimer();
 	}
 
 	inline void activateBoth()
 	{
-		m_currState = BOTH_ACTIVE;
+		m_directionState = BOTH_ACTIVE;
 		m_setupTimer();
 	}
 
 	inline void deactivate()
 	{
-		m_currState = INACTIVE;
+		m_directionState = INACTIVE;
 	}
 
 	void inline timerCallbackCOMPA()
 	{
 		// turn LEDs on if required
-		switch (m_currState)
+		if (m_brightnessState != OFF)
 		{
-		case LEFT_ACTIVE:
-			digitalWrite(m_leftPin, HIGH);
-			m_advanceTimer();
-			break;
-
-		case RIGHT_ACTIVE:
-			digitalWrite(m_rightPin, HIGH);
-			m_advanceTimer();
-			break;
-
-		case BOTH_ACTIVE:
-			digitalWrite(m_leftPin, HIGH);
-			digitalWrite(m_rightPin, HIGH);
-			m_advanceTimer();
-			break;
-
-		default:
-			break;
+			switch(m_directionState)
+			{
+				case LEFT_ACTIVE:
+					digitalWrite(m_leftPin, HIGH);
+					m_advanceTimer();
+					break;
+					
+				case RIGHT_ACTIVE:
+					digitalWrite(m_rightPin, HIGH);
+					m_advanceTimer();
+					break;
+					
+				case BOTH_ACTIVE:
+					digitalWrite(m_leftPin, HIGH);
+					digitalWrite(m_rightPin, HIGH);
+					m_advanceTimer();
+					break;
+					
+				default:
+					break;
+			}
 		}
 	}
-
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
+	
 	void inline timerCallbackCOMPB()
 	{
 		// turn LEDs off
-		if (OCR1B < m_maxOCR1A)
+		if (m_brightnessState != ON)
 		{
 			digitalWrite(m_leftPin, LOW);
 			digitalWrite(m_rightPin, LOW);
 		}
 	}
-#elif defined (__AVR_ATmega4809__)
-	void inline timerCallbackCOMPB()
-	{
-		// turn LEDs off
-		if (TCA0.SINGLE.CMP0 < m_maxOCR1A | m_currState == INACTIVE)
-		{
-			digitalWrite(m_leftPin, LOW);
-			digitalWrite(m_rightPin, LOW);
-		}
-	}
-#endif
-
-	// states
+	
+	// direction states
 	static const uint8_t INACTIVE = 0;
 	static const uint8_t LEFT_ACTIVE = 1;
 	static const uint8_t RIGHT_ACTIVE = 2;
 	static const uint8_t BOTH_ACTIVE = 3;
-
-	// minimum timer value for glitch-free operation
-	// FIXME: This is later on used as a table index rather than an actual timer value
 	static const uint8_t MIN_VAL = 0x1A;
-
-private:
-
-	// register names are dependent on platform
+	
+	// brightness states
+	static const uint8_t OFF = 0;
+	static const uint8_t UP = 1;
+	static const uint8_t DOWN = 2;
+	static const uint8_t ON = 3;
+	
+	
+	private:
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 	inline void m_setupTimer()
 	{
@@ -127,98 +124,89 @@ private:
 
 	inline void m_advanceTimer()
 	{
-		// calculate new value
-		if (m_currTimerDirUp)
-		{
-			if (m_currVal < 0xFF)
-			{
-				m_currVal++;
-			}
-			else
-			{
-				m_currTimerDirUp = false;
-			}
-		}
-
-		if (!m_currTimerDirUp)
-		{
-			if (m_currVal > MIN_VAL)
-			{
-				m_currVal--;
-			}
-			else
-			{
-				m_currTimerDirUp = true;
-				m_currVal++; // necessary because the first if() was missed
-			}
-		}
-
-		// set timer value
+		// set timer value for current state
 		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
-	}
-
-#elif defined (__AVR_ATmega4809__)
-
-	inline void m_setupTimer()
-	{
-		m_currVal = MIN_VAL;
-		m_currTimerDirUp = true;
-
-		// Reverse PORTMUX setting
-		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
-
-		// Period setting
-		// TODO: Is -1 still necessary?
-		TCA0.SINGLE.PER = m_maxOCR1A - 1;
-
-		// Interrupts
-		TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm);
-	}
-
-	inline void m_advanceTimer()
-	{
-		// calculate new value
-		if (m_currTimerDirUp)
+		
+		// calculate next state
+		switch(m_brightnessState)
 		{
-			if (m_currVal < 0xFF)
-			{
+			case UP:
+				if (m_currVal == 0xFF)
+				{
+					// this implies that ON holding time is at least 1 cycle
+					m_brightnessState = ON;
+					m_holdCounter = m_holdOn;
+				}
+				break;
+			
+			case ON:
+				if (m_currVal == 0xFF)
+				{
+					// always decrement counter: one cycle has already passed since the transition from UP
+					m_holdCounter--;
+					if (m_holdCounter == 0)
+					{
+						m_brightnessState = DOWN;
+					}
+				}
+				break;
+				
+			case DOWN:
+				if (m_currVal == 0x00)
+				{
+					// this implies that OFF holding time is at least 1 cycle
+					m_brightnessState = OFF;
+					m_holdCounter = m_holdOff;
+				}
+			case OFF:
+				if (m_currVal == 0xFF)
+				{
+					// always decrement counter: one cycle has already passed since the transition from DOWN
+					m_holdCounter--;
+					if (m_holdCounter == 0)
+					{
+						m_brightnessState = UP;
+					}
+				}
+				break;
+			
+		}
+		
+		// calculate next value
+		switch(m_brightnessState)
+		{
+			case UP:
 				m_currVal++;
-			}
-			else
-			{
-				m_currTimerDirUp = false;
-			}
-		}
-
-		if (!m_currTimerDirUp)
-		{
-			if (m_currVal > MIN_VAL)
-			{
+				break;
+			case DOWN:
 				m_currVal--;
-
-			}
-			else
-			{
-				m_currTimerDirUp = true;
-				m_currVal++; // necessary because the first if() was missed
-			}
-		}
-
-		// set timer value
-		TCA0.SINGLE.CMP0 = pgm_read_word_near(fadingblinker_data + m_currVal);
+				break;
+		}	
 	}
 #endif
-
+	
 	// private members
 	uint8_t m_leftPin;
 	uint8_t m_rightPin;
-
-	// blinking state
+	
+	// direction state
 	// TODO: use an enum
-	uint8_t m_currState;
-
+	uint8_t m_directionState;
+	
+	// brightness state
+	// TODO: use an enum
+	uint8_t m_brightnessState;
+	
+	uint8_t m_holdCounter;
+	
+	// constants
+	
 	bool m_currTimerDirUp;
 	uint8_t m_currVal;
 	uint16_t m_maxOCR1A;
+	uint8_t m_holdOn;
+	uint8_t m_holdOff;
+	
+
 };
 #endif
