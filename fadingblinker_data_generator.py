@@ -29,23 +29,38 @@ class GammaTableCalc:
             self.calc()
 
         # write file head
-        result = ""
+        result = "/* PWM values and constants for FadingBlinker */\n\n"
         result += "#ifndef FADINGBLINKER_DATA_H\n"
-        result += "#define FADINGBLINKER_DATA_H\n\n"
-        result += "// this array contains {0} timer values, the timer's TOP value, the number of off cycles, the number of on cycles\n".format(
-            math.floor(math.pow(2, self.bits_in)))
-        result += "static const uint{0}_t PROGMEM fadingblinker_data[] = {{".format(self.bits_out)
+        result += "#define FADINGBLINKER_DATA_H\n"
+        result += "\nstatic const uint{0}_t PROGMEM fadingblinker_data[] =\n{{\n".format(self.bits_out)
+        result += "//{0} timer values\n".format(math.floor(math.pow(2, self.bits_in)))
 
         # add gamma values
-        max_value = math.floor(math.pow(2, self.bits_in) - 1)
-        for value in range(0, max_value):
-            result += "\t{0},".format(self.output[value])
+        wraparound_max = 10
+        wraparound_counter = 0
+        for value in self.output:
+            result += "\t{0},".format(value)
 
-        # add TOP, off_cycles, on_cycles and tail
+            # add extra tab for small numbers
+            if value < 100:
+                result += "\t"
+            wraparound_counter += 1
+            if wraparound_counter >= wraparound_max:
+                result += "\n"
+                wraparound_counter = 0
+
+        # add other constants
+        result += "\n// Timer TOP value\n"
         result += "\t{0},".format(self.top)
+
+        result += "\n// Off cycles \n"
         result += "\t{0},".format(self.off_cycles)
+
+        result += "\n// On cycles \n"
         result += "\t{0}".format(self.on_cycles)
-        result += "\t};\n\n"
+
+        # add tail
+        result += "\n};\n\n"
         result += "#endif\n"
 
         # return result and print
