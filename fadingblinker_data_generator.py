@@ -2,16 +2,27 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, bits_in=8, bits_out=16, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20,
-                 tone_frequency_hz = 440):
-        self.bits_in = bits_in
-        self.bits_out = bits_out
+    def __init__(self, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20, tone_frequency_hz = 440):
+        self.bits_in = 8
+        self.bits_out = 16
+        self.store_in_flash = False
         self.top = top
         self.gamma = gamma
         self.tone_freq = tone_frequency_hz
         self.off_cycles = off_cycles
         self.on_cycles = on_cycles
         self.output = []
+
+    def build_header(self):
+        return "// Data Container\n" \
+               "struct fadingblinker_data_struct\n" \
+                 "{\n" \
+                 "\tuint16_t pwmData[256];\n" \
+                 "\tuint16_t timerTop;\n" \
+                 "\tuint8_t holdOff;\n" \
+                 "\tuint8_t holdOn;\n" \
+                 "\tuint16_t buzzerFreq;\n" \
+                 "};\n"
 
     def calc(self):
         # calculate parameters
@@ -34,8 +45,14 @@ class GammaTableCalc:
         result = "/* PWM values and constants for FadingBlinker */\n\n"
         result += "#ifndef FADINGBLINKER_DATA_H\n"
         result += "#define FADINGBLINKER_DATA_H\n"
-        result += "\nstatic const uint16_t PROGMEM fadingblinker_data[] =\n{\n"
-        result += "//{0} timer values\n".format(math.floor(math.pow(2, self.bits_in)))
+        result += "\n"
+        result += self.build_header()
+        result += "\n// Generated Data\n"
+        result += "static const fadingblinker_data_struct fadingblinker_data"
+        if self.store_in_flash:
+            result += " PROGMEM"
+        result += " =\n{\n"
+        result += "\tpwmData: {\n\t"
 
         # add gamma values
         wraparound_max = 10
@@ -48,24 +65,23 @@ class GammaTableCalc:
                 result += "\t"
             wraparound_counter += 1
             if wraparound_counter >= wraparound_max:
-                result += "\n"
+                result += "\n\t"
                 wraparound_counter = 0
+        result += "\n\t},\n"
 
         # add other constants
-        result += "\n// Timer TOP value\n"
-        result += "\t{0},".format(self.top)
+        result += "\ttimerTop:"
+        result += "\t{0},\n".format(self.top)
 
-        result += "\n// Off cycles \n"
-        result += "\t{0},".format(self.off_cycles)
-
-        result += "\n// On cycles \n"
-        result += "\t{0},".format(self.on_cycles)
-
-        result += "\n// Buzzer frequency [Hz]\n"
-        result += "\t{0}".format(self.tone_freq)
+        result += "\tholdOff:"
+        result += "\t{0},\n".format(self.off_cycles)
+        result += "\tholdOn:"
+        result += "\t\t{0},\n".format(self.on_cycles)
+        result += "\tbuzzerFreq:"
+        result += "\t{0}\n".format(self.tone_freq)
 
         # add tail
-        result += "\n};\n\n"
+        result += "};\n\n"
         result += "#endif\n"
 
         # return result and print

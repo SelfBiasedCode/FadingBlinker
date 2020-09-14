@@ -6,8 +6,8 @@
 
 class FadingBlinker
 {
-public:
-
+	
+	public:
 	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(INACTIVE), m_brightnessState(UP)
 	{
 
@@ -17,13 +17,7 @@ public:
 
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
-		digitalWrite(m_rightPin, HIGH);
-
-		// TODO: Use a pointer
-		m_timerTop = pgm_read_word_near(fadingblinker_data + 255);
-		m_holdOff = (uint8_t)pgm_read_word_near(fadingblinker_data + 256);
-		m_holdOn = (uint8_t)pgm_read_word_near(fadingblinker_data + 257);
-		m_buzzerFreq = pgm_read_word_near(fadingblinker_data + 258);
+		digitalWrite(m_rightPin, HIGH);	
 	}
 
 	inline void activateLeft()
@@ -109,12 +103,12 @@ private:
 		TCCR1B |= (1 << WGM12);
 
 		// CTC Limit
-		OCR1A = m_timerTop;
+		OCR1A = fadingblinker_data.timerTop;
 	}
 
 	inline void m_setCompareValue()
 	{
-		OCR1B = pgm_read_word_near(fadingblinker_data + m_currTableIndex);
+		OCR1B = fadingblinker_data.pwmData[m_currTableIndex];
 	}
 
 #elif defined (__AVR_ATmega4809__)
@@ -129,7 +123,7 @@ private:
 
 		// Period setting
 		// TODO: Is -1 still necessary?
-		TCA0.SINGLE.PER = m_timerTop - 1;
+		TCA0.SINGLE.PER = fadingblinker_data.timerTop - 1;
 
 		// Interrupts
 		TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm);
@@ -137,7 +131,7 @@ private:
 
 	inline void m_setCompareValue()
 	{
-		TCA0.SINGLE.CMP0 = pgm_read_word_near(fadingblinker_data + m_currTableIndex);
+		TCA0.SINGLE.CMP0 = fadingblinker_data.pwmData[m_currTableIndex];
 	}
 #endif
 
@@ -155,8 +149,8 @@ private:
 			{
 				// this implies that ON holding time is at least 1 cycle
 				m_brightnessState = ON;
-				m_holdCounter = m_holdOn;
-				tone(m_buzzerPin, m_buzzerFreq);
+				m_holdCounter = fadingblinker_data.holdOn;
+				tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
 			}
 			break;
 
@@ -178,7 +172,7 @@ private:
 			{
 				// this implies that OFF holding time is at least 1 cycle
 				m_brightnessState = OFF;
-				m_holdCounter = m_holdOff;
+				m_holdCounter = fadingblinker_data.holdOff;
 			}
 		case OFF:
 			if (m_currTableIndex == 0xFF)
@@ -218,11 +212,8 @@ private:
 	// TODO: use an enum
 	uint8_t m_brightnessState;
 
-	// constants
-	uint16_t m_buzzerFreq;
-	uint16_t m_timerTop;
-	uint8_t m_holdOn;
-	uint8_t m_holdOff;
+	// constants from generated data
+	fadingblinker_data_struct fadingblinker_data;
 
 	// variables
 	uint8_t m_currTableIndex;
