@@ -89,7 +89,7 @@ private:
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 	inline void m_setupTimer()
 	{
-		m_currTableIndex = MIN_VAL;
+		m_currTableIndex = 0x00;
 		m_brightnessState = UP;
 
 		// interrupts for COMPA and COMPB
@@ -115,7 +115,7 @@ private:
 
 	inline void m_setupTimer()
 	{
-		m_currTableIndex = MIN_VAL;
+		m_currTableIndex = 0x00;
 		m_brightnessState = UP;
 
 		// Reverse PORTMUX setting
@@ -224,7 +224,6 @@ private:
 	static const uint8_t LEFT_ACTIVE = 1;
 	static const uint8_t RIGHT_ACTIVE = 2;
 	static const uint8_t BOTH_ACTIVE = 3;
-	static const uint8_t MIN_VAL = 0x1A;
 
 	// brightness states
 	static const uint8_t OFF = 0;
