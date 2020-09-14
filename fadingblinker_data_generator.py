@@ -28,11 +28,14 @@ class GammaTableCalc:
     def calc(self):
         # calculate parameters
         max_index = math.floor(math.pow(2, self.bits_in) - 1)
-        max_value = self.top - self.min_value
+        max_value = self.top
 
         # calculate values
         for index in range(0, max_index):
-            value = math.floor(max_value * math.pow(index / max_index, self.gamma) + self.min_value)
+            value = math.floor(max_value * math.pow(index / max_index, self.gamma))
+            # clamp if necessary
+            if value < self.min_value:
+                value = self.min_value
             self.output.append(value)
 
         return self.output
