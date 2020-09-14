@@ -15,6 +15,8 @@ ISR(TIMER1_COMPA_vect)
 #ifndef FADING_BLINKER_H
 #define FADING_BLINKER_H
 
+//#define TIME_TRACKING_TIMER_DIVIDER
+
 #include "Arduino.h"
 #include "fadingblinker_data.hpp"           
 
@@ -66,6 +68,9 @@ class FadingBlinker
 	inline void deactivate()
 	{
 		m_currState = INACTIVE;
+   // HACK
+   digitalWrite(m_leftPin, LOW);
+     digitalWrite(m_rightPin, LOW);
 	}
 	
 	void inline timerCallbackCOMPA()
@@ -75,6 +80,7 @@ class FadingBlinker
 		{
 			case LEFT_ACTIVE:
 				digitalWrite(m_leftPin, HIGH);
+         //Serial.println("HIGH");
 				m_advanceTimer();
 				break;
 				
@@ -94,6 +100,7 @@ class FadingBlinker
 		}
 	}
 	
+	#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 	void inline timerCallbackCOMPB()
 	{
 		// turn LEDs off
@@ -103,6 +110,18 @@ class FadingBlinker
 			digitalWrite(m_rightPin, LOW);
 		}
 	}
+	#elif defined (__AVR_ATmega4809__)
+	void inline timerCallbackCOMPB()
+	{
+		// turn LEDs off
+		if ( TCA0.SINGLE.CMP0 < m_maxOCR1A | m_currState == INACTIVE)
+		{
+    //Serial.println("LOW");
+			digitalWrite(m_leftPin, LOW);
+			digitalWrite(m_rightPin, LOW);
+		}
+	}
+	#endif
 	
 	// states
 	static const uint8_t INACTIVE = 0;
@@ -175,29 +194,49 @@ class FadingBlinker
 	{
 		m_currVal = MIN_VAL;
 		m_currTimerDirUp = true;
+    
+		Serial.print("setupTimer(): currVal ");
+    Serial.print(m_currVal);
+    Serial.print(", maxVal: ");
+    Serial.println(m_maxOCR1A);
+    
+		// COMPA: Start -> OVF
+		// TCA0_OVF_vect
+		// COMPB: Stop -> CMP0
+		// TCA0_CMP0_vect
 		
-		// interrupts for COMPA and COMPB
-		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
+		// PORTMUX setting for TCA -> all outputs [0:2] point to PORTB pins [0:2]
+		PORTMUX.TCAROUTEA  &= ~(PORTMUX_TCA0_PORTB_gc);
+
+		// Setup timers for normal mode
+		TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
+
+		// Period setting, 16 bit register but val resolution is 8 bit
+		TCA0.SINGLE.PER = m_maxOCR1A -1;
 		
-		// prescaler: 1
-		TCCR1B = (1 << CS10);// | (1 << CS10);
-		
-		// CTC mode
-		TCCR1A = 0x0000;
-		TCCR1B |= ( 1 << WGM12);
-		
-		// CTC Limit
-		OCR1A = m_maxOCR1A;
+		// Interrupts
+		TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm  | TCA_SINGLE_OVF_bm);
+
+		// Default duty 50%, will re-assign in analogWrite()
+		//TCA0.SINGLE.CMP0BUF = PWM_TIMER_COMPARE;
+		//TCA0.SINGLE.CMP1BUF = PWM_TIMER_COMPARE;
+		//TCA0.SINGLE.CMP2BUF = PWM_TIMER_COMPARE;
+
+		// Use DIV64 prescaler (giving 250kHz clock), enable TCA timer
+		TCA0.SINGLE.CTRLA = (TCA_SINGLE_CLKSEL_DIV64_gc) | (TCA_SINGLE_ENABLE_bm);
 	}
 	 
 	inline void m_advanceTimer()
 	{
+  // works
+  
 		// calculate new value
 		if (m_currTimerDirUp)
 		{
 			if (m_currVal < 0xFF)
 			{
 				m_currVal++;
+       
 			}
 			else
 			{
@@ -210,6 +249,7 @@ class FadingBlinker
 			if (m_currVal > MIN_VAL)
 			{
 				m_currVal--;
+        //Serial.println("Advance-");
 			}
 			else
 			{
@@ -219,7 +259,10 @@ class FadingBlinker
 		}
 		
 		// set timer value
-		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
+     
+		TCA0.SINGLE.CMP0 = pgm_read_word_near(fadingblinker_data + m_currVal);
+    TCA0.SINGLE.CMP0 = 0x0007;
+    //Serial.println(TCA0.SINGLE.CMP0);
 	}
 	#endif
 	
@@ -240,4 +283,3 @@ class FadingBlinker
 
 
 #endif
-
