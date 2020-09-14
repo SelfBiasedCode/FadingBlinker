@@ -13,7 +13,31 @@ If necessary, edit the parameters in **fadingblinker_data_generator.py**, then r
 
 ### Integration
 #### ATmega328P
-FadingBlinker requires two interrupt vectors to be registered: *TIMER1_COMPA* and *TIMER1_COMPB*. Each must call the matching function in FadingBlinker (and could also execute other code if required). An eample can be found at the top of **FadingBlinker.hpp**.
+FadingBlinker requires two interrupt vectors to be registered: *TIMER1_COMPA* and *TIMER1_COMPB*. Each must call the matching function in FadingBlinker (and could also execute other code if required). Example:
+
+    ISR(TIMER1_COMPA_vect)
+    {
+	    FadingBlinker.timerCallbackCOMPA();
+    }
+    
+    ISR(TIMER1_COMPB_vect)
+    {
+	    FadingBlinker.timerCallbackCOMPB();
+    }
+#### ATmega4809
+Similar to the 328P, two interrupt vectors must be use, though they're named OVF and CMP0:
+
+    ISR(TCA0_OVF_vect)
+    {
+      blinker.timerCallbackCOMPA();
+      TCA0.SINGLE.INTFLAGS |= TCA_SINGLE_OVF_bm;
+    }
+    
+    ISR(TCA0_CMP0_vect)
+    {
+      blinker.timerCallbackCOMPB();
+      TCA0.SINGLE.INTFLAGS |= TCA_SINGLE_CMP0_bm;
+    }
 
 ### Setup
 1. Instantiate the class. Parameters are the pin numbers for the left and right blinkers.
