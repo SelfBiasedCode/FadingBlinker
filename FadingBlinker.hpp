@@ -6,11 +6,11 @@
 
 class FadingBlinker
 {
-	public:
-	
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin):m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(INACTIVE), m_brightnessState(UP)
+public:
+
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(INACTIVE), m_brightnessState(UP)
 	{
-	{
+
 		// set direction registers
 		pinMode(m_leftPin, OUTPUT);
 		pinMode(m_rightPin, OUTPUT);
@@ -18,16 +18,16 @@ class FadingBlinker
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
 		digitalWrite(m_rightPin, HIGH);
-		
+
 		// TODO: Use a pointer
 		m_timerTop = pgm_read_word_near(fadingblinker_data + 255);
-		m_holdOff = (uint8_t) pgm_read_word_near(fadingblinker_data + 256);
-		m_holdOn = (uint8_t) pgm_read_word_near(fadingblinker_data + 257);
+		m_holdOff = (uint8_t)pgm_read_word_near(fadingblinker_data + 256);
+		m_holdOn = (uint8_t)pgm_read_word_near(fadingblinker_data + 257);
 		m_buzzerFreq = pgm_read_word_near(fadingblinker_data + 258);
 	}
 
 	inline void activateLeft()
-	{ 
+	{
 		m_directionState = LEFT_ACTIVE;
 		m_setupTimer();
 	}
@@ -54,30 +54,30 @@ class FadingBlinker
 		// turn LEDs on if required
 		if (m_brightnessState != OFF)
 		{
-			switch(m_directionState)
+			switch (m_directionState)
 			{
-				case LEFT_ACTIVE:
-					digitalWrite(m_leftPin, HIGH);
-					m_advanceTimer();
-					break;
-					
-				case RIGHT_ACTIVE:
-					digitalWrite(m_rightPin, HIGH);
-					m_advanceTimer();
-					break;
-					
-				case BOTH_ACTIVE:
-					digitalWrite(m_leftPin, HIGH);
-					digitalWrite(m_rightPin, HIGH);
-					m_advanceTimer();
-					break;
-					
-				default:
-					break;
+			case LEFT_ACTIVE:
+				digitalWrite(m_leftPin, HIGH);
+				m_advanceTimer();
+				break;
+
+			case RIGHT_ACTIVE:
+				digitalWrite(m_rightPin, HIGH);
+				m_advanceTimer();
+				break;
+
+			case BOTH_ACTIVE:
+				digitalWrite(m_leftPin, HIGH);
+				digitalWrite(m_rightPin, HIGH);
+				m_advanceTimer();
+				break;
+
+			default:
+				break;
 			}
 		}
 	}
-	
+
 	void inline timerCallbackCOMPB()
 	{
 		// turn LEDs off
@@ -88,15 +88,16 @@ class FadingBlinker
 		}
 	}
 
-	private:
+private:
 
 	/* platform dependent code */
+	// TODO: Move to constructor
 #if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 	inline void m_setupTimer()
 	{
 		m_currTableIndex = MIN_VAL;
 		m_brightnessState = UP;
-		
+
 		// interrupts for COMPA and COMPB
 		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
 
@@ -110,10 +111,33 @@ class FadingBlinker
 		// CTC Limit
 		OCR1A = m_timerTop;
 	}
-	
+
 	inline void m_setCompareValue()
 	{
 		OCR1B = pgm_read_word_near(fadingblinker_data + m_currTableIndex);
+	}
+
+#elif defined (__AVR_ATmega4809__)
+
+	inline void m_setupTimer()
+	{
+		m_currTableIndex = MIN_VAL;
+		m_brightnessState = UP;
+
+		// Reverse PORTMUX setting
+		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
+
+		// Period setting
+		// TODO: Is -1 still necessary?
+		TCA0.SINGLE.PER = m_timerTop - 1;
+
+		// Interrupts
+		TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm);
+	}
+
+	inline void m_setCompareValue()
+	{
+		TCA0.SINGLE.CMP0 = pgm_read_word_near(fadingblinker_data + m_currTableIndex);
 	}
 #endif
 
@@ -122,95 +146,95 @@ class FadingBlinker
 	{
 		// set timer value for current state
 		m_setCompareValue();
-		
+
 		// calculate next state and control buzzer
-		switch(m_brightnessState)
+		switch (m_brightnessState)
 		{
-			case UP:
-				if (m_currTableIndex == 0xFF)
+		case UP:
+			if (m_currTableIndex == 0xFF)
+			{
+				// this implies that ON holding time is at least 1 cycle
+				m_brightnessState = ON;
+				m_holdCounter = m_holdOn;
+				tone(m_buzzerPin, m_buzzerFreq);
+			}
+			break;
+
+		case ON:
+			if (m_currTableIndex == 0xFF)
+			{
+				// always decrement counter: one cycle has already passed since the transition from UP
+				m_holdCounter--;
+				if (m_holdCounter == 0)
 				{
-					// this implies that ON holding time is at least 1 cycle
-					m_brightnessState = ON;
-					m_holdCounter = m_holdOn;
-					tone(m_buzzerPin, m_buzzerFreq);
+					m_brightnessState = DOWN;
+					noTone(m_buzzerPin);
 				}
-				break;
-			
-			case ON:
-				if (m_currTableIndex == 0xFF)
+			}
+			break;
+
+		case DOWN:
+			if (m_currTableIndex == 0x00)
+			{
+				// this implies that OFF holding time is at least 1 cycle
+				m_brightnessState = OFF;
+				m_holdCounter = m_holdOff;
+			}
+		case OFF:
+			if (m_currTableIndex == 0xFF)
+			{
+				// always decrement counter: one cycle has already passed since the transition from DOWN
+				m_holdCounter--;
+				if (m_holdCounter == 0)
 				{
-					// always decrement counter: one cycle has already passed since the transition from UP
-					m_holdCounter--;
-					if (m_holdCounter == 0)
-					{
-						m_brightnessState = DOWN;
-						noTone(m_buzzerPin);
-					}
+					m_brightnessState = UP;
 				}
-				break;
-				
-			case DOWN:
-				if (m_currTableIndex == 0x00)
-				{
-					// this implies that OFF holding time is at least 1 cycle
-					m_brightnessState = OFF;
-					m_holdCounter = m_holdOff;
-				}
-			case OFF:
-				if (m_currTableIndex == 0xFF)
-				{
-					// always decrement counter: one cycle has already passed since the transition from DOWN
-					m_holdCounter--;
-					if (m_holdCounter == 0)
-					{
-						m_brightnessState = UP;
-					}
-				}
-				break;
+			}
+			break;
 		}
-		
+
 		// calculate next value
-		switch(m_brightnessState)
+		switch (m_brightnessState)
 		{
-			case UP:
-				m_currTableIndex++;
-				break;
-			case DOWN:
-				m_currTableIndex--;
-				break;
-		}	
+		case UP:
+			m_currTableIndex++;
+			break;
+		case DOWN:
+			m_currTableIndex--;
+			break;
+		}
 	}
 
 	// pin assignments
 	uint8_t m_leftPin;
 	uint8_t m_rightPin;
 	uint8_t m_buzzerPin;
-	
+
 	// direction state
 	// TODO: use an enum
 	uint8_t m_directionState;
-	
+
 	// brightness state
 	// TODO: use an enum
 	uint8_t m_brightnessState;
-	
+
 	// constants
 	uint16_t m_buzzerFreq;
 	uint16_t m_timerTop;
 	uint8_t m_holdOn;
 	uint8_t m_holdOff;
-	
+
 	// variables
 	uint8_t m_currTableIndex;
 	uint8_t m_holdCounter;
-	
+
 	// direction states
 	static const uint8_t INACTIVE = 0;
 	static const uint8_t LEFT_ACTIVE = 1;
 	static const uint8_t RIGHT_ACTIVE = 2;
 	static const uint8_t BOTH_ACTIVE = 3;
 	static const uint8_t MIN_VAL = 0x1A;
-	
+
 	// brightness states
 	static const uint8_t OFF = 0;
 	static const uint8_t UP = 1;
@@ -218,4 +242,5 @@ class FadingBlinker
 	static const uint8_t ON = 3;
 
 };
+
 #endif
