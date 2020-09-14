@@ -20,7 +20,7 @@ class FadingBlinker
 		digitalWrite(m_rightPin, HIGH);
 		
 		// TODO: Use a pointer
-		m_maxOCR1A = pgm_read_word_near(fadingblinker_data + 255);
+		m_timerTop = pgm_read_word_near(fadingblinker_data + 255);
 		m_holdOff = (uint8_t) pgm_read_word_near(fadingblinker_data + 256);
 		m_holdOn = (uint8_t) pgm_read_word_near(fadingblinker_data + 257);
 		m_buzzerFreq = pgm_read_word_near(fadingblinker_data + 258);
@@ -87,6 +87,122 @@ class FadingBlinker
 			digitalWrite(m_rightPin, LOW);
 		}
 	}
+
+	private:
+
+	/* platform dependent code */
+#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
+	inline void m_setupTimer()
+	{
+		m_currTableIndex = MIN_VAL;
+		m_brightnessState = UP;
+		
+		// interrupts for COMPA and COMPB
+		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
+
+		// prescaler: 1
+		TCCR1B = (1 << CS10);
+
+		// CTC mode
+		TCCR1A = 0x0000;
+		TCCR1B |= (1 << WGM12);
+
+		// CTC Limit
+		OCR1A = m_timerTop;
+	}
+	
+	inline void m_setCompareValue()
+	{
+		OCR1B = pgm_read_word_near(fadingblinker_data + m_currTableIndex);
+	}
+#endif
+
+	/* platform independent code */
+	inline void m_advanceTimer()
+	{
+		// set timer value for current state
+		m_setCompareValue();
+		
+		// calculate next state and control buzzer
+		switch(m_brightnessState)
+		{
+			case UP:
+				if (m_currTableIndex == 0xFF)
+				{
+					// this implies that ON holding time is at least 1 cycle
+					m_brightnessState = ON;
+					m_holdCounter = m_holdOn;
+					tone(m_buzzerPin, m_buzzerFreq);
+				}
+				break;
+			
+			case ON:
+				if (m_currTableIndex == 0xFF)
+				{
+					// always decrement counter: one cycle has already passed since the transition from UP
+					m_holdCounter--;
+					if (m_holdCounter == 0)
+					{
+						m_brightnessState = DOWN;
+						noTone(m_buzzerPin);
+					}
+				}
+				break;
+				
+			case DOWN:
+				if (m_currTableIndex == 0x00)
+				{
+					// this implies that OFF holding time is at least 1 cycle
+					m_brightnessState = OFF;
+					m_holdCounter = m_holdOff;
+				}
+			case OFF:
+				if (m_currTableIndex == 0xFF)
+				{
+					// always decrement counter: one cycle has already passed since the transition from DOWN
+					m_holdCounter--;
+					if (m_holdCounter == 0)
+					{
+						m_brightnessState = UP;
+					}
+				}
+				break;
+		}
+		
+		// calculate next value
+		switch(m_brightnessState)
+		{
+			case UP:
+				m_currTableIndex++;
+				break;
+			case DOWN:
+				m_currTableIndex--;
+				break;
+		}	
+	}
+
+	// pin assignments
+	uint8_t m_leftPin;
+	uint8_t m_rightPin;
+	uint8_t m_buzzerPin;
+	
+	// direction state
+	// TODO: use an enum
+	uint8_t m_directionState;
+	
+	// brightness state
+	// TODO: use an enum
+	uint8_t m_brightnessState;
+	
+	// constants
+	uint16_t m_buzzerFreq;
+	uint16_t m_timerTop;
+	uint8_t m_holdOn;
+	uint8_t m_holdOff;
+	
+	// variables
+	uint8_t m_currTableIndex;
+	uint8_t m_holdCounter;
 	
 	// direction states
 	static const uint8_t INACTIVE = 0;
@@ -100,116 +216,6 @@ class FadingBlinker
 	static const uint8_t UP = 1;
 	static const uint8_t DOWN = 2;
 	static const uint8_t ON = 3;
-	
-	
-	private:
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
-	inline void m_setupTimer()
-	{
-		m_currVal = MIN_VAL;
-		m_brightnessState = UP;
-		
-		// interrupts for COMPA and COMPB
-		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
-
-		// prescaler: 1
-		TCCR1B = (1 << CS10);// | (1 << CS10);
-
-		// CTC mode
-		TCCR1A = 0x0000;
-		TCCR1B |= (1 << WGM12);
-
-		// CTC Limit
-		OCR1A = m_maxOCR1A;
-	}
-
-	inline void m_advanceTimer()
-	{
-		// set timer value for current state
-		OCR1B = pgm_read_word_near(fadingblinker_data + m_currVal);
-		
-		// calculate next state
-		switch(m_brightnessState)
-		{
-			case UP:
-				if (m_currVal == 0xFF)
-				{
-					// this implies that ON holding time is at least 1 cycle
-					m_brightnessState = ON;
-					m_holdCounter = m_holdOn;
-					tone(m_buzzerPin, m_buzzerFreq);
-				}
-				break;
-			
-			case ON:
-				if (m_currVal == 0xFF)
-				{
-					// always decrement counter: one cycle has already passed since the transition from UP
-					m_holdCounter--;
-					if (m_holdCounter == 0)
-					{
-						m_brightnessState = DOWN;
-						noTone(m_buzzerPin);
-					}
-				}
-				break;
-				
-			case DOWN:
-				if (m_currVal == 0x00)
-				{
-					// this implies that OFF holding time is at least 1 cycle
-					m_brightnessState = OFF;
-					m_holdCounter = m_holdOff;
-				}
-			case OFF:
-				if (m_currVal == 0xFF)
-				{
-					// always decrement counter: one cycle has already passed since the transition from DOWN
-					m_holdCounter--;
-					if (m_holdCounter == 0)
-					{
-						m_brightnessState = UP;
-					}
-				}
-				break;
-			
-		}
-		
-		// calculate next value
-		switch(m_brightnessState)
-		{
-			case UP:
-				m_currVal++;
-				break;
-			case DOWN:
-				m_currVal--;
-				break;
-		}	
-	}
-#endif
-	
-	// private members
-	uint8_t m_leftPin;
-	uint8_t m_rightPin;
-	
-	// direction state
-	// TODO: use an enum
-	uint8_t m_directionState;
-	
-	// brightness state
-	// TODO: use an enum
-	uint8_t m_brightnessState;
-	
-	uint8_t m_holdCounter;
-	
-	// constants
-	bool m_currTimerDirUp;
-	uint8_t m_currVal;
-	uint16_t m_maxOCR1A;
-	uint8_t m_holdOn;
-	uint8_t m_holdOff;
-	uint8_t m_buzzerPin;
-	uint16_t m_buzzerFreq;
 
 };
 #endif
