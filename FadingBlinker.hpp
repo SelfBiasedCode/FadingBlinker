@@ -4,6 +4,11 @@
 #include "Arduino.h"
 #include "fadingblinker_data.hpp"
 
+// warn about unsupported architectures
+#if !(defined(__AVR_ATmega328P__)|| defined(__AVR_ATmega4809__))
+#warning Unknown platform, use at your own risk!
+#endif
+
 class FadingBlinker
 {
 	
@@ -86,7 +91,7 @@ private:
 
 	/* platform dependent code */
 	// TODO: Move to constructor
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
+#if defined(__AVR_ATmega328P__)
 	inline void m_setupTimer()
 	{
 		m_currTableIndex = 0x00;

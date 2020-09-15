@@ -11,7 +11,7 @@ void setup() {}
 
 void loop()
 {
- // run all functions
+  // run all functions
   blinker.activateLeft();
   delay(3000);
   blinker.activateRight();
@@ -23,6 +23,7 @@ void loop()
 }
 
 // Timer Callbacks
+#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
 ISR(TIMER1_COMPB_vect)
 {
   blinker.timerCallbackCOMPB();
@@ -32,3 +33,18 @@ ISR(TIMER1_COMPA_vect)
 {
   blinker.timerCallbackCOMPA();
 }
+#elif defined(__AVR_ATmega4809__)
+
+ISR(TCA0_OVF_vect)
+{
+  blinker.timerCallbackCOMPA();
+  TCA0.SINGLE.INTFLAGS |= TCA_SINGLE_OVF_bm;
+}
+
+ISR(TCA0_CMP0_vect)
+{
+  blinker.timerCallbackCOMPB();
+  TCA0.SINGLE.INTFLAGS |= TCA_SINGLE_CMP0_bm;
+}
+
+#endif
