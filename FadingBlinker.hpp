@@ -11,9 +11,13 @@
 
 class FadingBlinker
 {
-	
-	public:
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(INACTIVE), m_brightnessState(UP)
+	// forward declarations
+private:
+	enum class DirectionState;
+	enum class BrightnessState;
+
+public:
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(DirectionState::Inactive), m_brightnessState(BrightnessState::Up)
 	{
 
 		// set direction registers
@@ -22,50 +26,50 @@ class FadingBlinker
 
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
-		digitalWrite(m_rightPin, HIGH);	
+		digitalWrite(m_rightPin, HIGH);
 	}
 
 	inline void activateLeft()
 	{
-		m_directionState = LEFT_ACTIVE;
+		m_directionState = DirectionState::LeftActive;
 		m_setupTimer();
 	}
 
 	inline void activateRight()
 	{
-		m_directionState = RIGHT_ACTIVE;
+		m_directionState = DirectionState::RightActive;
 		m_setupTimer();
 	}
 
 	inline void activateBoth()
 	{
-		m_directionState = BOTH_ACTIVE;
+		m_directionState = DirectionState::BothActive;
 		m_setupTimer();
 	}
 
 	inline void deactivate()
 	{
-		m_directionState = INACTIVE;
+		m_directionState = DirectionState::Inactive;
 	}
 
 	void inline timerCallbackCOMPA()
 	{
 		// turn LEDs on if required
-		if (m_brightnessState != OFF)
+		if (m_brightnessState != BrightnessState::Off)
 		{
 			switch (m_directionState)
 			{
-			case LEFT_ACTIVE:
+			case DirectionState::LeftActive:
 				digitalWrite(m_leftPin, HIGH);
 				m_advanceTimer();
 				break;
 
-			case RIGHT_ACTIVE:
+			case DirectionState::RightActive:
 				digitalWrite(m_rightPin, HIGH);
 				m_advanceTimer();
 				break;
 
-			case BOTH_ACTIVE:
+			case DirectionState::BothActive:
 				digitalWrite(m_leftPin, HIGH);
 				digitalWrite(m_rightPin, HIGH);
 				m_advanceTimer();
@@ -80,7 +84,7 @@ class FadingBlinker
 	void inline timerCallbackCOMPB()
 	{
 		// turn LEDs off
-		if (m_brightnessState != ON)
+		if (m_brightnessState != BrightnessState::On)
 		{
 			digitalWrite(m_leftPin, LOW);
 			digitalWrite(m_rightPin, LOW);
@@ -95,7 +99,7 @@ private:
 	inline void m_setupTimer()
 	{
 		m_currTableIndex = 0x00;
-		m_brightnessState = UP;
+		m_brightnessState = BrightnessState::Up;
 
 		// interrupts for COMPA and COMPB
 		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
@@ -121,7 +125,7 @@ private:
 	inline void m_setupTimer()
 	{
 		m_currTableIndex = 0x00;
-		m_brightnessState = UP;
+		m_brightnessState = BrightnessState::Up;
 
 		// Reverse PORTMUX setting
 		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
@@ -149,44 +153,44 @@ private:
 		// calculate next state and control buzzer
 		switch (m_brightnessState)
 		{
-		case UP:
+		case BrightnessState::Up:
 			if (m_currTableIndex == 0xFF)
 			{
 				// this implies that ON holding time is at least 1 cycle
-				m_brightnessState = ON;
+				m_brightnessState = BrightnessState::On;
 				m_holdCounter = fadingblinker_data.holdOn;
 				tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
 			}
 			break;
 
-		case ON:
+		case BrightnessState::On:
 			if (m_currTableIndex == 0xFF)
 			{
 				// always decrement counter: one cycle has already passed since the transition from UP
 				m_holdCounter--;
 				if (m_holdCounter == 0)
 				{
-					m_brightnessState = DOWN;
+					m_brightnessState = BrightnessState::Down;
 					noTone(m_buzzerPin);
 				}
 			}
 			break;
 
-		case DOWN:
+		case BrightnessState::Down:
 			if (m_currTableIndex == 0x00)
 			{
 				// this implies that OFF holding time is at least 1 cycle
-				m_brightnessState = OFF;
+				m_brightnessState = BrightnessState::Off;
 				m_holdCounter = fadingblinker_data.holdOff;
 			}
-		case OFF:
+		case BrightnessState::Off:
 			if (m_currTableIndex == 0xFF)
 			{
 				// always decrement counter: one cycle has already passed since the transition from DOWN
 				m_holdCounter--;
 				if (m_holdCounter == 0)
 				{
-					m_brightnessState = UP;
+					m_brightnessState = BrightnessState::Up;
 				}
 			}
 			break;
@@ -195,10 +199,10 @@ private:
 		// calculate next value
 		switch (m_brightnessState)
 		{
-		case UP:
+		case BrightnessState::Up:
 			m_currTableIndex++;
 			break;
-		case DOWN:
+		case BrightnessState::Down:
 			m_currTableIndex--;
 			break;
 		}
@@ -210,12 +214,10 @@ private:
 	uint8_t m_buzzerPin;
 
 	// direction state
-	// TODO: use an enum
-	uint8_t m_directionState;
+	DirectionState m_directionState;
 
 	// brightness state
-	// TODO: use an enum
-	uint8_t m_brightnessState;
+	BrightnessState m_brightnessState;
 
 	// constants from generated data
 	fadingblinker_data_struct fadingblinker_data;
@@ -225,17 +227,10 @@ private:
 	uint8_t m_holdCounter;
 
 	// direction states
-	static const uint8_t INACTIVE = 0;
-	static const uint8_t LEFT_ACTIVE = 1;
-	static const uint8_t RIGHT_ACTIVE = 2;
-	static const uint8_t BOTH_ACTIVE = 3;
+	enum class DirectionState { Inactive, LeftActive, RightActive, BothActive };
 
 	// brightness states
-	static const uint8_t OFF = 0;
-	static const uint8_t UP = 1;
-	static const uint8_t DOWN = 2;
-	static const uint8_t ON = 3;
-
+	enum class BrightnessState { Off, Up, On, Down };
 };
 
 #endif
