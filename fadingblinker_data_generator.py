@@ -2,9 +2,9 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, minimum = 0x05, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20, tone_frequency_hz = 440):
-        self.bits_in = 8
-        self.bits_out = 16
+    def __init__(self, minimum=0x05, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20, tone_frequency_hz=440):
+        bits_in = 8
+        self.indices = math.floor(math.pow(2, bits_in))
         self.store_in_flash = False
         self.min_value = minimum
         self.top = top
@@ -17,17 +17,17 @@ class GammaTableCalc:
     def build_header(self):
         return "// Data Container\n" \
                "struct fadingblinker_data_struct\n" \
-                 "{\n" \
-                 "\tuint16_t pwmData[256];\n" \
-                 "\tuint16_t timerTop;\n" \
-                 "\tuint8_t holdOff;\n" \
-                 "\tuint8_t holdOn;\n" \
-                 "\tuint16_t buzzerFreq;\n" \
-                 "};\n"
+               "{\n" \
+               f"\tuint16_t pwmData[{self.indices}];\n" \
+               "\tuint16_t timerTop;\n" \
+               "\tuint8_t holdOff;\n" \
+               "\tuint8_t holdOn;\n" \
+               "\tuint16_t buzzerFreq;\n" \
+               "};\n"
 
     def calc(self):
         # calculate parameters
-        max_index = math.floor(math.pow(2, self.bits_in) - 1)
+        max_index = self.indices - 1
         max_value = self.top
 
         # calculate values
