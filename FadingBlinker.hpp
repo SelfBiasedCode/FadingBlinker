@@ -13,8 +13,8 @@ class FadingBlinker
 {
 	// forward declarations
 private:
-	enum class DirectionState;
-	enum class BrightnessState;
+	enum class DirectionState : uint8_t;
+	enum class BrightnessState : uint8_t;
 
 public:
 	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(DirectionState::Inactive), m_brightnessState(BrightnessState::Up)
@@ -27,24 +27,27 @@ public:
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
 		digitalWrite(m_rightPin, HIGH);
+		
+		// initialize timer (platform dependent)
+		m_setupTimer();
 	}
 
 	inline void activateLeft()
 	{
 		m_directionState = DirectionState::LeftActive;
-		m_setupTimer();
+		m_resetTimer();
 	}
 
 	inline void activateRight()
 	{
 		m_directionState = DirectionState::RightActive;
-		m_setupTimer();
+		m_resetTimer();
 	}
 
 	inline void activateBoth()
 	{
 		m_directionState = DirectionState::BothActive;
-		m_setupTimer();
+		m_resetTimer();
 	}
 
 	inline void deactivate()
@@ -94,13 +97,9 @@ public:
 private:
 
 	/* platform dependent code */
-	// TODO: Move to constructor
 #if defined(__AVR_ATmega328P__)
 	inline void m_setupTimer()
 	{
-		m_currTableIndex = 0x00;
-		m_brightnessState = BrightnessState::Up;
-
 		// interrupts for COMPA and COMPB
 		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
 
@@ -124,9 +123,6 @@ private:
 
 	inline void m_setupTimer()
 	{
-		m_currTableIndex = 0x00;
-		m_brightnessState = BrightnessState::Up;
-
 		// Reverse PORTMUX setting
 		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
 
@@ -145,6 +141,12 @@ private:
 #endif
 
 	/* platform independent code */
+	inline void m_resetTimer()
+	{
+		m_currTableIndex = 0x00;
+		m_brightnessState = BrightnessState::Up;
+	}
+	
 	inline void m_advanceTimer()
 	{
 		// set timer value for current state
@@ -227,10 +229,10 @@ private:
 	uint8_t m_holdCounter;
 
 	// direction states
-	enum class DirectionState { Inactive, LeftActive, RightActive, BothActive };
+	enum class DirectionState : uint8_t { Inactive, LeftActive, RightActive, BothActive };
 
 	// brightness states
-	enum class BrightnessState { Off, Up, On, Down };
+	enum class BrightnessState : uint8_t { Off, Up, On, Down };
 };
 
 #endif
