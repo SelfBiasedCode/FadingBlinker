@@ -20,8 +20,8 @@ class GammaTableCalc:
                "{\n" \
                f"\tuint16_t pwmData[{self.indices}];\n" \
                "\tuint16_t timerTop;\n" \
-               "\tuint8_t holdOff;\n" \
-               "\tuint8_t holdOn;\n" \
+               "\tuint8_t holdOffCycles;\n" \
+               "\tuint8_t holdOnCycles;\n" \
                "\tuint16_t buzzerFreq;\n" \
                "};\n"
 
@@ -77,9 +77,9 @@ class GammaTableCalc:
         result += "\ttimerTop:"
         result += "\t{0},\n".format(self.top)
 
-        result += "\tholdOff:"
+        result += "\tholdOffCycles:"
         result += "\t{0},\n".format(self.off_cycles)
-        result += "\tholdOn:"
+        result += "\tholdOnCycles:"
         result += "\t\t{0},\n".format(self.on_cycles)
         result += "\tbuzzerFreq:"
         result += "\t{0}\n".format(self.tone_freq)

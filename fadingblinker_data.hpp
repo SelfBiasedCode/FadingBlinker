@@ -8,8 +8,8 @@ struct fadingblinker_data_struct
 {
 	uint16_t pwmData[256];
 	uint16_t timerTop;
-	uint8_t holdOff;
-	uint8_t holdOn;
+	uint8_t holdOffCycles;
+	uint8_t holdOnCycles;
 	uint16_t buzzerFreq;
 };
 
@@ -45,8 +45,8 @@ static const fadingblinker_data_struct fadingblinker_data =
 		31371,	31647,	31925,	32205,	32485,
 	},
 	timerTop:	32768,
-	holdOff:	20,
-	holdOn:		20,
+	holdOffCycles:	20,
+	holdOnCycles:		20,
 	buzzerFreq:	440
 };
 

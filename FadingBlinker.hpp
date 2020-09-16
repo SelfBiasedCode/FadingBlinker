@@ -160,7 +160,7 @@ private:
 			{
 				// this implies that ON holding time is at least 1 cycle
 				m_brightnessState = BrightnessState::On;
-				m_holdCounter = fadingblinker_data.holdOn;
+				m_holdCounter = fadingblinker_data.holdOnCycles;
 				tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
 			}
 			break;
@@ -183,7 +183,7 @@ private:
 			{
 				// this implies that OFF holding time is at least 1 cycle
 				m_brightnessState = BrightnessState::Off;
-				m_holdCounter = fadingblinker_data.holdOff;
+				m_holdCounter = fadingblinker_data.holdOffCycles;
 			}
 		case BrightnessState::Off:
 			if (m_currTableIndex == 0xFF)
