@@ -13,11 +13,11 @@ class FadingBlinker
 {
 	// forward declarations
 private:
-	enum class DirectionState : uint8_t;
+	enum class OperationState : uint8_t;
 	enum class BrightnessState : uint8_t;
 
 public:
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_directionState(DirectionState::Inactive), m_brightnessState(BrightnessState::Up)
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) :m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
 	{
 
 		// set direction registers
@@ -34,31 +34,28 @@ public:
 
 	inline void activateLeft()
 	{
-		m_directionState = DirectionState::LeftActive;
-		m_resetTimer();
+		m_startOperation(OperationState::LeftActive);
 	}
 
 	inline void activateRight()
 	{
-		m_directionState = DirectionState::RightActive;
-		m_resetTimer();
+		m_startOperation(OperationState::RightActive);
 	}
 
 	inline void activateBoth()
 	{
-		m_directionState = DirectionState::BothActive;
-		m_resetTimer();
+		m_startOperation(OperationState::BothActive);
 	}
 
 	inline void flashBoth()
 	{
-		m_directionState = DirectionState::Flash;
-		m_resetTimer();
+		m_startOperation(OperationState::Flash);
 	}
 
 	inline void deactivate()
 	{
-		m_directionState = DirectionState::Inactive;
+		// timer reset is not necessary for deactivation
+		m_OperationState = OperationState::Inactive;
 	}
 
 	void inline timerCallbackCOMPA()
@@ -66,20 +63,20 @@ public:
 		// turn LEDs on if required
 		if (m_brightnessState != BrightnessState::Off)
 		{
-			switch (m_directionState)
+			switch (m_OperationState)
 			{
-			case DirectionState::LeftActive:
+			case OperationState::LeftActive:
 				digitalWrite(m_leftPin, HIGH);
 				m_advanceTimer();
 				break;
 
-			case DirectionState::RightActive:
+			case OperationState::RightActive:
 				digitalWrite(m_rightPin, HIGH);
 				m_advanceTimer();
 				break;
 
-			case DirectionState::BothActive:
-			case DirectionState::Flash:
+			case OperationState::BothActive:
+			case OperationState::Flash:
 				digitalWrite(m_leftPin, HIGH);
 				digitalWrite(m_rightPin, HIGH);
 				m_advanceTimer();
@@ -148,16 +145,22 @@ private:
 #endif
 
 	/* platform independent code */
-	inline void m_resetTimer()
+	inline void m_startOperation(OperationState newState)
 	{
+		// do not restart already running programs
+		if (newState == m_OperationState)
+			return;
+
+		m_OperationState = newState;
+
 		// reset dimming index
 		m_currTableIndex = 0x00;
 
 		// initialize state machine depending on operation mode
-		if (m_directionState == DirectionState::Flash)
+		if (m_OperationState == OperationState::Flash)
 		{
 			m_brightnessState = BrightnessState::On;
-			
+
 			// the hold counter has to be preloaded as it would usually be set during state transition
 			m_holdCounter = fadingblinker_data.flashCycles;
 		}
@@ -196,7 +199,7 @@ private:
 					noTone(m_buzzerPin);
 
 					// go to next state depending on operation mode
-					if (m_directionState == DirectionState::Flash)
+					if (m_OperationState == OperationState::Flash)
 					{
 						m_brightnessState = BrightnessState::Off;
 						m_holdCounter = fadingblinker_data.flashCycles;
@@ -224,7 +227,7 @@ private:
 				if (m_holdCounter == 0)
 				{
 					// go to next state depending on operation mode
-					if (m_directionState == DirectionState::Flash)
+					if (m_OperationState == OperationState::Flash)
 					{
 						m_brightnessState = BrightnessState::On;
 						m_holdCounter = fadingblinker_data.flashCycles;
@@ -256,7 +259,7 @@ private:
 	uint8_t m_buzzerPin;
 
 	// direction state
-	DirectionState m_directionState;
+	OperationState m_OperationState;
 
 	// brightness state
 	BrightnessState m_brightnessState;
@@ -269,7 +272,7 @@ private:
 	uint8_t m_holdCounter;
 
 	// direction states
-	enum class DirectionState : uint8_t { Inactive, LeftActive, RightActive, BothActive, Flash };
+	enum class OperationState : uint8_t { Inactive, LeftActive, RightActive, BothActive, Flash };
 
 	// brightness states
 	enum class BrightnessState : uint8_t { Off, Up, On, Down };
