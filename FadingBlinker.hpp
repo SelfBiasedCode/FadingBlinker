@@ -27,7 +27,7 @@ public:
 		// set initial state
 		digitalWrite(m_leftPin, HIGH);
 		digitalWrite(m_rightPin, HIGH);
-		
+
 		// initialize timer (platform dependent)
 		m_setupTimer();
 	}
@@ -47,6 +47,12 @@ public:
 	inline void activateBoth()
 	{
 		m_directionState = DirectionState::BothActive;
+		m_resetTimer();
+	}
+
+	inline void flashBoth()
+	{
+		m_directionState = DirectionState::Flash;
 		m_resetTimer();
 	}
 
@@ -73,6 +79,7 @@ public:
 				break;
 
 			case DirectionState::BothActive:
+			case DirectionState::Flash:
 				digitalWrite(m_leftPin, HIGH);
 				digitalWrite(m_rightPin, HIGH);
 				m_advanceTimer();
@@ -143,10 +150,23 @@ private:
 	/* platform independent code */
 	inline void m_resetTimer()
 	{
+		// reset dimming index
 		m_currTableIndex = 0x00;
-		m_brightnessState = BrightnessState::Up;
+
+		// initialize state machine depending on operation mode
+		if (m_directionState == DirectionState::Flash)
+		{
+			m_brightnessState = BrightnessState::On;
+			
+			// the hold counter has to be preloaded as it would usually be set during state transition
+			m_holdCounter = fadingblinker_data.flashCycles;
+		}
+		else
+		{
+			m_brightnessState = BrightnessState::Up;
+		}
 	}
-	
+
 	inline void m_advanceTimer()
 	{
 		// set timer value for current state
@@ -172,8 +192,19 @@ private:
 				m_holdCounter--;
 				if (m_holdCounter == 0)
 				{
-					m_brightnessState = BrightnessState::Down;
+					// turn off buzzer
 					noTone(m_buzzerPin);
+
+					// go to next state depending on operation mode
+					if (m_directionState == DirectionState::Flash)
+					{
+						m_brightnessState = BrightnessState::Off;
+						m_holdCounter = fadingblinker_data.flashCycles;
+					}
+					else
+					{
+						m_brightnessState = BrightnessState::Down;
+					}
 				}
 			}
 			break;
@@ -192,7 +223,16 @@ private:
 				m_holdCounter--;
 				if (m_holdCounter == 0)
 				{
-					m_brightnessState = BrightnessState::Up;
+					// go to next state depending on operation mode
+					if (m_directionState == DirectionState::Flash)
+					{
+						m_brightnessState = BrightnessState::On;
+						m_holdCounter = fadingblinker_data.flashCycles;
+					}
+					else
+					{
+						m_brightnessState = BrightnessState::Up;
+					}
 				}
 			}
 			break;
@@ -229,7 +269,7 @@ private:
 	uint8_t m_holdCounter;
 
 	// direction states
-	enum class DirectionState : uint8_t { Inactive, LeftActive, RightActive, BothActive };
+	enum class DirectionState : uint8_t { Inactive, LeftActive, RightActive, BothActive, Flash };
 
 	// brightness states
 	enum class BrightnessState : uint8_t { Off, Up, On, Down };
