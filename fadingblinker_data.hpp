@@ -46,9 +46,9 @@ static const fadingblinker_data_struct fadingblinker_data =
 		15685,	15823,	15962,	16102,	16242,
 	},
 	timerTop:		16384,
-	holdOffCycles:		20,
-	holdOnCycles:			20,
-	flashCycles:	20,
+	holdOffCycles:	75,
+	holdOnCycles:	75,
+	flashCycles:	32,
 	buzzerFreq:		440
 };
 

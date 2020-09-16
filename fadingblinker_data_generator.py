@@ -2,7 +2,7 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, minimum=0x05, top=0x4000, gamma=2.2, off_cycles=20, on_cycles=20, flash_cycles = 20, tone_frequency_hz=440):
+    def __init__(self, minimum=0x05, top=0x4000, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles = 32, tone_frequency_hz=440):
         bits_in = 8
         self.indices = math.floor(math.pow(2, bits_in))
         self.store_in_flash = False
@@ -80,9 +80,9 @@ class GammaTableCalc:
         result += "\t\t{0},\n".format(self.top)
 
         result += "\tholdOffCycles:"
-        result += "\t\t{0},\n".format(self.off_cycles)
+        result += "\t{0},\n".format(self.off_cycles)
         result += "\tholdOnCycles:"
-        result += "\t\t\t{0},\n".format(self.on_cycles)
+        result += "\t{0},\n".format(self.on_cycles)
         result += "\tflashCycles:"
         result += "\t{0},\n".format(self.flash_cycles)
         result += "\tbuzzerFreq:"

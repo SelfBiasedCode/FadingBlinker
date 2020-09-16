@@ -18,12 +18,14 @@ void loop()
   delay(3000);
   blinker.activateBoth();
   delay(3000);
+  blinker.flashBoth();
+  delay(3000);
   blinker.deactivate();
   delay(1000);
 }
 
 // Timer Callbacks
-#if defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PA__)
+#if defined(__AVR_ATmega328P__)
 ISR(TIMER1_COMPB_vect)
 {
   blinker.timerCallbackCOMPB();
