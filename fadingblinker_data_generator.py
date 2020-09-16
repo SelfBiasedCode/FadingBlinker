@@ -2,7 +2,7 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, minimum=0x05, top=0x8000, gamma=2.2, off_cycles=20, on_cycles=20, tone_frequency_hz=440):
+    def __init__(self, minimum=0x05, top=0x4000, gamma=2.2, off_cycles=20, on_cycles=20, flash_cycles = 20, tone_frequency_hz=440):
         bits_in = 8
         self.indices = math.floor(math.pow(2, bits_in))
         self.store_in_flash = False
@@ -12,6 +12,7 @@ class GammaTableCalc:
         self.tone_freq = tone_frequency_hz
         self.off_cycles = off_cycles
         self.on_cycles = on_cycles
+        self.flash_cycles = flash_cycles
         self.output = []
 
     def build_header(self):
@@ -22,6 +23,7 @@ class GammaTableCalc:
                "\tuint16_t timerTop;\n" \
                "\tuint8_t holdOffCycles;\n" \
                "\tuint8_t holdOnCycles;\n" \
+               "\tuint8_t flashCycles;\n" \
                "\tuint16_t buzzerFreq;\n" \
                "};\n"
 
@@ -75,14 +77,16 @@ class GammaTableCalc:
 
         # add other constants
         result += "\ttimerTop:"
-        result += "\t{0},\n".format(self.top)
+        result += "\t\t{0},\n".format(self.top)
 
         result += "\tholdOffCycles:"
-        result += "\t{0},\n".format(self.off_cycles)
+        result += "\t\t{0},\n".format(self.off_cycles)
         result += "\tholdOnCycles:"
-        result += "\t\t{0},\n".format(self.on_cycles)
+        result += "\t\t\t{0},\n".format(self.on_cycles)
+        result += "\tflashCycles:"
+        result += "\t{0},\n".format(self.flash_cycles)
         result += "\tbuzzerFreq:"
-        result += "\t{0}\n".format(self.tone_freq)
+        result += "\t\t{0}\n".format(self.tone_freq)
 
         # add tail
         result += "};\n\n"
