@@ -2,7 +2,7 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, minimum=0x05, top=0x4000, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles = 32, tone_frequency_hz=440):
+    def __init__(self, minimum=0x01, top=0x0300, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles = 32, tone_frequency_hz=440):
         bits_in = 8
         self.indices = math.floor(math.pow(2, bits_in))
         self.store_in_flash = False
@@ -33,7 +33,7 @@ class GammaTableCalc:
         max_value = self.top
 
         # calculate values
-        for index in range(0, max_index):
+        for index in range(0, max_index + 1):
             value = math.floor(max_value * math.pow(index / max_index, self.gamma))
             # clamp if necessary
             if value < self.min_value:
