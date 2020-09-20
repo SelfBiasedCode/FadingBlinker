@@ -67,36 +67,35 @@ class FadingBlinker
         {
           case OperationState::LeftActive:
             digitalWrite(m_leftPin, HIGH);
-           
             break;
 
           case OperationState::RightActive:
             digitalWrite(m_rightPin, HIGH);
-            //m_advanceTimer();
             break;
 
           case OperationState::BothActive:
           case OperationState::Flash:
             digitalWrite(m_leftPin, HIGH);
             digitalWrite(m_rightPin, HIGH);
-            //m_advanceTimer();
             break;
 
           default:
             break;
         }
       }
+      
+      // always advance timer
        m_advanceTimer();
     }
 
     void inline timerCallbackCOMPB()
     {
       // turn LEDs off
-      //if (m_brightnessState != BrightnessState::On)
-      //{
+      if (m_brightnessState != BrightnessState::On)
+      {
         digitalWrite(m_leftPin, LOW);
         digitalWrite(m_rightPin, LOW);
-      //}
+      }
     }
 
   private:
@@ -128,20 +127,22 @@ class FadingBlinker
 
     inline void m_setupTimer()
     {
-      // Reverse PORTMUX setting
+      // Reverse PORTMUX setting from Arduino
       PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
 
-      // Period setting
-      // TODO: Is -1 still necessary?
-      TCA0.SINGLE.PER = fadingblinker_data.timerTop - 1;
-
-      // Interrupts
-      TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm);
+      // Set period
+      TCA0.SINGLE.PER = fadingblinker_data.timerTop;
+	  
+	  // Set to Single Slope PWM and synchronize register updates
+      TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_ALUPD_bm;
+	  
+      // Activate Interrupts
+      TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm  | TCA_SINGLE_OVF_bm);
     }
 
     inline void m_setCompareValue()
     {
-      TCA0.SINGLE.CMP0 = fadingblinker_data.pwmData[m_currTableIndex];
+      TCA0.SINGLE.CMP0BUF = fadingblinker_data.pwmData[m_currTableIndex];
     }
 #endif
 
@@ -179,15 +180,6 @@ class FadingBlinker
       
       // set timer value for current state
       m_setCompareValue();
-
-      Serial.print("Index ");
-      Serial.print(m_currTableIndex);
-      Serial.print(", Value ");
-      Serial.print(TCA0.SINGLE.CMP0);
-      Serial.print(", OpState ");
-      Serial.print((uint8_t)m_OperationState);
-      Serial.print(", BrightState ");
-      Serial.println((uint8_t)m_brightnessState);
 
       // calculate next state and control buzzer
       switch (m_brightnessState)
