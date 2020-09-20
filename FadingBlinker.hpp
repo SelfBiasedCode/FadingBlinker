@@ -67,35 +67,36 @@ class FadingBlinker
         {
           case OperationState::LeftActive:
             digitalWrite(m_leftPin, HIGH);
-            m_advanceTimer();
+           
             break;
 
           case OperationState::RightActive:
             digitalWrite(m_rightPin, HIGH);
-            m_advanceTimer();
+            //m_advanceTimer();
             break;
 
           case OperationState::BothActive:
           case OperationState::Flash:
             digitalWrite(m_leftPin, HIGH);
             digitalWrite(m_rightPin, HIGH);
-            m_advanceTimer();
+            //m_advanceTimer();
             break;
 
           default:
             break;
         }
       }
+       m_advanceTimer();
     }
 
     void inline timerCallbackCOMPB()
     {
       // turn LEDs off
-      if (m_brightnessState != BrightnessState::On)
-      {
+      //if (m_brightnessState != BrightnessState::On)
+      //{
         digitalWrite(m_leftPin, LOW);
         digitalWrite(m_rightPin, LOW);
-      }
+      //}
     }
 
   private:
@@ -172,8 +173,21 @@ class FadingBlinker
 
     inline void m_advanceTimer()
     {
+      if (m_OperationState == OperationState::Inactive)
+        return;
+
+      
       // set timer value for current state
       m_setCompareValue();
+
+      Serial.print("Index ");
+      Serial.print(m_currTableIndex);
+      Serial.print(", Value ");
+      Serial.print(TCA0.SINGLE.CMP0);
+      Serial.print(", OpState ");
+      Serial.print((uint8_t)m_OperationState);
+      Serial.print(", BrightState ");
+      Serial.println((uint8_t)m_brightnessState);
 
       // calculate next state and control buzzer
       switch (m_brightnessState)
