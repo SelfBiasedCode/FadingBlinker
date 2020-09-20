@@ -25,9 +25,12 @@ class FadingBlinker
       pinMode(m_rightPin, OUTPUT);
 
       // set initial state
-      digitalWrite(m_leftPin, HIGH);
-      digitalWrite(m_rightPin, HIGH);
+      digitalWrite(m_leftPin, LOW);
+      digitalWrite(m_rightPin, LOW);
+    }
 
+    inline void init()
+    {
       // initialize timer (platform dependent)
       m_setupTimer();
     }
