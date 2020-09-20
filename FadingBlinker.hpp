@@ -11,276 +11,276 @@
 
 class FadingBlinker
 {
-    // forward declarations
-  private:
-    enum class OperationState : uint8_t;
-      enum class BrightnessState : uint8_t;
+	// forward declarations
+private:
+	enum class OperationState : uint8_t;
+	enum class BrightnessState : uint8_t;
 
-    public:
-      FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
-    {
+public:
+	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
+	{
 
-      // set direction registers
-      pinMode(m_leftPin, OUTPUT);
-      pinMode(m_rightPin, OUTPUT);
+		// set direction registers
+		pinMode(m_leftPin, OUTPUT);
+		pinMode(m_rightPin, OUTPUT);
 
-      // set initial state
-      digitalWrite(m_leftPin, LOW);
-      digitalWrite(m_rightPin, LOW);
-    }
+		// set initial state
+		digitalWrite(m_leftPin, LOW);
+		digitalWrite(m_rightPin, LOW);
+	}
 
-    inline void init()
-    {
-      // initialize timer (platform dependent)
-      m_setupTimer();
-    }
+	inline void init()
+	{
+		// initialize timer (platform dependent)
+		m_setupTimer();
+	}
 
-    inline void activateLeft()
-    {
-      m_startOperation(OperationState::LeftActive);
-    }
+	inline void activateLeft()
+	{
+		m_startOperation(OperationState::LeftActive);
+	}
 
-    inline void activateRight()
-    {
-      m_startOperation(OperationState::RightActive);
-    }
+	inline void activateRight()
+	{
+		m_startOperation(OperationState::RightActive);
+	}
 
-    inline void activateBoth()
-    {
-      m_startOperation(OperationState::BothActive);
-    }
+	inline void activateBoth()
+	{
+		m_startOperation(OperationState::BothActive);
+	}
 
-    inline void flashBoth()
-    {
-      m_startOperation(OperationState::Flash);
-    }
+	inline void flashBoth()
+	{
+		m_startOperation(OperationState::Flash);
+	}
 
-    inline void deactivate()
-    {
-      // timer reset is not necessary for deactivation
-      m_OperationState = OperationState::Inactive;
-    }
+	inline void deactivate()
+	{
+		// timer reset is not necessary for deactivation
+		m_OperationState = OperationState::Inactive;
+	}
 
-    void inline timerCallbackCOMPA()
-    {
-      // turn LEDs on if required
-      if (m_brightnessState != BrightnessState::Off)
-      {
-        switch (m_OperationState)
-        {
-          case OperationState::LeftActive:
-            digitalWrite(m_leftPin, HIGH);
-            break;
+	void inline timerCallbackCOMPA()
+	{
+		// turn LEDs on if required
+		if (m_brightnessState != BrightnessState::Off)
+		{
+			switch (m_OperationState)
+			{
+			case OperationState::LeftActive:
+				digitalWrite(m_leftPin, HIGH);
+				break;
 
-          case OperationState::RightActive:
-            digitalWrite(m_rightPin, HIGH);
-            break;
+			case OperationState::RightActive:
+				digitalWrite(m_rightPin, HIGH);
+				break;
 
-          case OperationState::BothActive:
-          case OperationState::Flash:
-            digitalWrite(m_leftPin, HIGH);
-            digitalWrite(m_rightPin, HIGH);
-            break;
+			case OperationState::BothActive:
+			case OperationState::Flash:
+				digitalWrite(m_leftPin, HIGH);
+				digitalWrite(m_rightPin, HIGH);
+				break;
 
-          default:
-            break;
-        }
-      }
-      
-      // always advance timer
-       m_advanceTimer();
-    }
+			default:
+				break;
+			}
+		}
 
-    void inline timerCallbackCOMPB()
-    {
-      // turn LEDs off
-      if (m_brightnessState != BrightnessState::On)
-      {
-        digitalWrite(m_leftPin, LOW);
-        digitalWrite(m_rightPin, LOW);
-      }
-    }
+		// always advance timer
+		m_advanceTimer();
+	}
 
-  private:
+	void inline timerCallbackCOMPB()
+	{
+		// turn LEDs off
+		if (m_brightnessState != BrightnessState::On)
+		{
+			digitalWrite(m_leftPin, LOW);
+			digitalWrite(m_rightPin, LOW);
+		}
+	}
 
-    /* platform dependent code */
+private:
+
+	/* platform dependent code */
 #if defined(__AVR_ATmega328P__)
-    inline void m_setupTimer()
-    {
-      // interrupts for COMPA and COMPB
-      TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
+	inline void m_setupTimer()
+	{
+		// interrupts for COMPA and COMPB
+		TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B);
 
-      // prescaler: 1
-      TCCR1B = (1 << CS10);
+		// prescaler: 1
+		TCCR1B = (1 << CS10);
 
-      // CTC mode
-      TCCR1A = 0x0000;
-      TCCR1B |= (1 << WGM12);
+		// CTC mode
+		TCCR1A = 0x0000;
+		TCCR1B |= (1 << WGM12);
 
-      // CTC Limit
-      OCR1A = fadingblinker_data.timerTop;
-    }
+		// CTC Limit
+		OCR1A = fadingblinker_data.timerTop;
+	}
 
-    inline void m_setCompareValue()
-    {
-      OCR1B = fadingblinker_data.pwmData[m_currTableIndex];
-    }
+	inline void m_setCompareValue()
+	{
+		OCR1B = fadingblinker_data.pwmData[m_currTableIndex];
+	}
 
 #elif defined (__AVR_ATmega4809__)
 
-    inline void m_setupTimer()
-    {
-      // Reverse PORTMUX setting from Arduino
-      PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
+	inline void m_setupTimer()
+	{
+		// Reverse PORTMUX setting from Arduino
+		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
 
-      // Set period
-      TCA0.SINGLE.PER = fadingblinker_data.timerTop;
-	  
-	  // Set to Single Slope PWM and synchronize register updates
-      TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_ALUPD_bm;
-	  
-      // Activate Interrupts
-      TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm  | TCA_SINGLE_OVF_bm);
-    }
+		// Set period
+		TCA0.SINGLE.PER = fadingblinker_data.timerTop;
 
-    inline void m_setCompareValue()
-    {
-      TCA0.SINGLE.CMP0BUF = fadingblinker_data.pwmData[m_currTableIndex];
-    }
+		// Set to Single Slope PWM and synchronize register updates
+		TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_ALUPD_bm;
+
+		// Activate Interrupts
+		TCA0.SINGLE.INTCTRL = (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm);
+	}
+
+	inline void m_setCompareValue()
+	{
+		TCA0.SINGLE.CMP0BUF = fadingblinker_data.pwmData[m_currTableIndex];
+	}
 #endif
 
-    /* platform independent code */
-    inline void m_startOperation(OperationState newState)
-    {
-      // do not restart already running programs
-      if (newState == m_OperationState)
-        return;
+	/* platform independent code */
+	inline void m_startOperation(OperationState newState)
+	{
+		// do not restart already running programs
+		if (newState == m_OperationState)
+			return;
 
-      m_OperationState = newState;
+		m_OperationState = newState;
 
-      // reset dimming index
-      m_currTableIndex = 0x00;
+		// reset dimming index
+		m_currTableIndex = 0x00;
 
-      // initialize state machine depending on operation mode
-      if (m_OperationState == OperationState::Flash)
-      {
-        m_brightnessState = BrightnessState::On;
+		// initialize state machine depending on operation mode
+		if (m_OperationState == OperationState::Flash)
+		{
+			m_brightnessState = BrightnessState::On;
 
-        // the hold counter has to be preloaded as it would usually be set during state transition
-        m_holdCounter = fadingblinker_data.flashCycles;
-      }
-      else
-      {
-        m_brightnessState = BrightnessState::Up;
-      }
-    }
+			// the hold counter has to be preloaded as it would usually be set during state transition
+			m_holdCounter = fadingblinker_data.flashCycles;
+		}
+		else
+		{
+			m_brightnessState = BrightnessState::Up;
+		}
+	}
 
-    inline void m_advanceTimer()
-    {
-      if (m_OperationState == OperationState::Inactive)
-        return;
+	inline void m_advanceTimer()
+	{
+		if (m_OperationState == OperationState::Inactive)
+			return;
 
-      
-      // set timer value for current state
-      m_setCompareValue();
 
-      // calculate next state and control buzzer
-      switch (m_brightnessState)
-      {
-        case BrightnessState::Up:
-          if (m_currTableIndex == 0xFF)
-          {
-            // this implies that ON holding time is at least 1 cycle
-            m_brightnessState = BrightnessState::On;
-            m_holdCounter = fadingblinker_data.holdOnCycles;
-            tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
-          }
-          break;
+		// set timer value for current state
+		m_setCompareValue();
 
-        case BrightnessState::On:
+		// calculate next state and control buzzer
+		switch (m_brightnessState)
+		{
+		case BrightnessState::Up:
+			if (m_currTableIndex == 0xFF)
+			{
+				// this implies that ON holding time is at least 1 cycle
+				m_brightnessState = BrightnessState::On;
+				m_holdCounter = fadingblinker_data.holdOnCycles;
+				tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
+			}
+			break;
 
-          // always decrement counter: one cycle has already passed since the transition from UP
-          m_holdCounter--;
-          if (m_holdCounter == 0)
-          {
-            // turn off buzzer
-            noTone(m_buzzerPin);
+		case BrightnessState::On:
 
-            // go to next state depending on operation mode
-            if (m_OperationState == OperationState::Flash)
-            {
-              m_brightnessState = BrightnessState::Off;
-              m_holdCounter = fadingblinker_data.flashCycles;
-            }
-            else
-            {
-              m_brightnessState = BrightnessState::Down;
-            }
-          }
+			// always decrement counter: one cycle has already passed since the transition from UP
+			m_holdCounter--;
+			if (m_holdCounter == 0)
+			{
+				// turn off buzzer
+				noTone(m_buzzerPin);
 
-          break;
+				// go to next state depending on operation mode
+				if (m_OperationState == OperationState::Flash)
+				{
+					m_brightnessState = BrightnessState::Off;
+					m_holdCounter = fadingblinker_data.flashCycles;
+				}
+				else
+				{
+					m_brightnessState = BrightnessState::Down;
+				}
+			}
 
-        case BrightnessState::Down:
-          if (m_currTableIndex == 0x00)
-          {
-            // this implies that OFF holding time is at least 1 cycle
-            m_brightnessState = BrightnessState::Off;
-            m_holdCounter = fadingblinker_data.holdOffCycles;
-          }
-          break;
+			break;
 
-        case BrightnessState::Off:
+		case BrightnessState::Down:
+			if (m_currTableIndex == 0x00)
+			{
+				// this implies that OFF holding time is at least 1 cycle
+				m_brightnessState = BrightnessState::Off;
+				m_holdCounter = fadingblinker_data.holdOffCycles;
+			}
+			break;
 
-          // always decrement counter: one cycle has already passed since the transition from DOWN
-          m_holdCounter--;
-          if (m_holdCounter == 0)
-          {
-            // go to next state depending on operation mode
-            if (m_OperationState == OperationState::Flash)
-            {
-              m_brightnessState = BrightnessState::On;
-              m_holdCounter = fadingblinker_data.flashCycles;
-            }
-            else
-            {
-              m_brightnessState = BrightnessState::Up;
-            }
-          }
-          break;
-      }
+		case BrightnessState::Off:
 
-      // calculate next value
-      switch (m_brightnessState)
-      {
-        case BrightnessState::Up:
-          m_currTableIndex++;
-          break;
-        case BrightnessState::Down:
-          m_currTableIndex--;
-          break;
-      }
-    }
+			// always decrement counter: one cycle has already passed since the transition from DOWN
+			m_holdCounter--;
+			if (m_holdCounter == 0)
+			{
+				// go to next state depending on operation mode
+				if (m_OperationState == OperationState::Flash)
+				{
+					m_brightnessState = BrightnessState::On;
+					m_holdCounter = fadingblinker_data.flashCycles;
+				}
+				else
+				{
+					m_brightnessState = BrightnessState::Up;
+				}
+			}
+			break;
+		}
 
-    // pin assignments
-    uint8_t m_leftPin;
-    uint8_t m_rightPin;
-    uint8_t m_buzzerPin;
+		// calculate next value
+		switch (m_brightnessState)
+		{
+		case BrightnessState::Up:
+			m_currTableIndex++;
+			break;
+		case BrightnessState::Down:
+			m_currTableIndex--;
+			break;
+		}
+	}
 
-    // direction state
-    OperationState m_OperationState;
+	// pin assignments
+	uint8_t m_leftPin;
+	uint8_t m_rightPin;
+	uint8_t m_buzzerPin;
 
-    // brightness state
-    BrightnessState m_brightnessState;
+	// direction state
+	OperationState m_OperationState;
 
-    // variables
-    uint8_t m_currTableIndex;
-    uint8_t m_holdCounter;
+	// brightness state
+	BrightnessState m_brightnessState;
 
-    // direction states
-    enum class OperationState : uint8_t { Inactive, LeftActive, RightActive, BothActive, Flash };
+	// variables
+	uint8_t m_currTableIndex;
+	uint8_t m_holdCounter;
 
-    // brightness states
-    enum class BrightnessState : uint8_t { Off, Up, On, Down };
+	// direction states
+	enum class OperationState : uint8_t { Inactive, LeftActive, RightActive, BothActive, Flash };
+
+	// brightness states
+	enum class BrightnessState : uint8_t { Off, Up, On, Down };
 };
 
 #endif
