@@ -104,7 +104,9 @@ public:
 private:
 
 	/* platform dependent code */
+	
 #if defined(__AVR_ATmega328P__)
+
 	inline void m_setupTimer()
 	{
 		// interrupts for COMPA and COMPB
@@ -147,6 +149,7 @@ private:
 	{
 		TCA0.SINGLE.CMP0BUF = fadingblinker_data.pwmData[m_currTableIndex];
 	}
+	
 #endif
 
 	/* platform independent code */
@@ -155,15 +158,19 @@ private:
 		// do not restart already running programs
 		if (newState == m_OperationState)
 			return;
-
+		
+		// reset state machine
 		m_OperationState = newState;
 
 		// reset dimming index
 		m_currTableIndex = 0x00;
 
+
 		// initialize state machine depending on operation mode
 		if (m_OperationState == OperationState::Flash)
 		{
+			// turn buzzer off
+			noTone(m_buzzerPin);
 			m_brightnessState = BrightnessState::On;
 
 			// the hold counter has to be preloaded as it would usually be set during state transition
@@ -171,6 +178,8 @@ private:
 		}
 		else
 		{
+			// turn buzzer on
+			tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
 			m_brightnessState = BrightnessState::Up;
 		}
 	}
@@ -179,7 +188,6 @@ private:
 	{
 		if (m_OperationState == OperationState::Inactive)
 			return;
-
 
 		// set timer value for current state
 		m_setCompareValue();
@@ -193,7 +201,9 @@ private:
 				// this implies that ON holding time is at least 1 cycle
 				m_brightnessState = BrightnessState::On;
 				m_holdCounter = fadingblinker_data.holdOnCycles;
-				tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
+				
+				// turn off buzzer
+				noTone(m_buzzerPin);
 			}
 			break;
 
@@ -203,21 +213,19 @@ private:
 			m_holdCounter--;
 			if (m_holdCounter == 0)
 			{
-				// turn off buzzer
-				noTone(m_buzzerPin);
-
 				// go to next state depending on operation mode
 				if (m_OperationState == OperationState::Flash)
 				{
+					//move to next state
 					m_brightnessState = BrightnessState::Off;
 					m_holdCounter = fadingblinker_data.flashCycles;
 				}
 				else
 				{
+					//move to next state
 					m_brightnessState = BrightnessState::Down;
 				}
 			}
-
 			break;
 
 		case BrightnessState::Down:
@@ -238,11 +246,14 @@ private:
 				// go to next state depending on operation mode
 				if (m_OperationState == OperationState::Flash)
 				{
+					//move to next state
 					m_brightnessState = BrightnessState::On;
 					m_holdCounter = fadingblinker_data.flashCycles;
 				}
 				else
 				{
+					// activate buzzer and move to next state
+					tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
 					m_brightnessState = BrightnessState::Up;
 				}
 			}
