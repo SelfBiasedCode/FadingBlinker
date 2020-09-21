@@ -1,65 +1,110 @@
 import math
 
 
-class gammacalc:
-	def __init__(self, bits_in = 8, bits_out = 16, top = 0x8000, fill_factor = 0.25, gamma = 2.2):
-		self.bits_in = bits_in
-		self.bits_out = bits_out
-		self.top = top
-		self.fill_factor = fill_factor
-		self.gamma = gamma
-		self.output = []
-		
-	def calc(self):
-		# calculate parameters
-		maxinputval = math.floor(math.pow(2, self.bits_in) - 1)
-		fillstart = math.floor(maxinputval * (1 - self.fill_factor))
-		maxoutputval = self.top
-		
-		# calculate values
-		for input in range(0, maxinputval):
-			if input < fillstart:
-				outputval = math.floor(maxoutputval * math.pow((input/fillstart), self.gamma))
-			else:
-				outputval = maxoutputval
-		
-			# store result
-			self.output.append(outputval)
-		
-		return self.output
-	
-	def output_to_string(self, print_to_stdout=False):
-		if self.output == []:
-			self.calc()
-		
-		# head
-		result = ""
-		result += "#ifndef GAMMA_VAL_H\n"
-		result += "#define GAMMA_VAL_H\n\n"
-		result += "// this array contains {0} timer values plus the TOP value for the timer\n".format(math.floor(math.pow(2, self.bits_in)))
-		result += "static const uint{0}_t PROGMEM fadingblinker_data[] = {{".format(self.bits_out)
-		
-		# add gamma values
-		maxinputval = math.floor(math.pow(2, self.bits_in) - 1)
-		for value in range(0, maxinputval):
-			result += "\t{0},".format(self.output[value])
+class GammaTableCalc:
+    def __init__(self, minimum=0x01, top=0x0300, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles = 32, tone_frequency_hz=440):
+        bits_in = 8
+        self.indices = math.floor(math.pow(2, bits_in))
+        self.store_in_flash = False
+        self.min_value = minimum
+        self.top = top
+        self.gamma = gamma
+        self.tone_freq = tone_frequency_hz
+        self.off_cycles = off_cycles
+        self.on_cycles = on_cycles
+        self.flash_cycles = flash_cycles
+        self.output = []
 
-		# add TOP and tail
-		result += "\t{0}\t}};\n\n".format(self.top)
-		result += "#endif\n"
-		
-		if print_to_stdout:
-			print(result)
-		return result
+    def build_header(self):
+        return "// Data Container\n" \
+               "struct fadingblinker_data_struct\n" \
+               "{\n" \
+               f"\tuint16_t pwmData[{self.indices}];\n" \
+               "\tuint16_t timerTop;\n" \
+               "\tuint8_t holdOffCycles;\n" \
+               "\tuint8_t holdOnCycles;\n" \
+               "\tuint8_t flashCycles;\n" \
+               "\tuint16_t buzzerFreq;\n" \
+               "};\n"
 
+    def calc(self):
+        # calculate parameters
+        max_index = self.indices - 1
+        max_value = self.top
 
-	def output_to_file(self, path):
-		with open(path, "w+") as file:
-			content = self.output_to_string()
-			file.write(content)
-			
+        # calculate values
+        for index in range(0, max_index + 1):
+            value = math.floor(max_value * math.pow(index / max_index, self.gamma))
+            # clamp if necessary
+            if value < self.min_value:
+                value = self.min_value
+            self.output.append(value)
+
+        return self.output
+
+    def output_to_string(self, print_to_stdout=False):
+        # if data has not been calculated yet, do so
+        if not self.output:
+            self.calc()
+
+        # write file head
+        result = "/* PWM values and constants for FadingBlinker */\n\n"
+        result += "#ifndef FADINGBLINKER_DATA_H\n"
+        result += "#define FADINGBLINKER_DATA_H\n"
+        result += "\n"
+        result += self.build_header()
+        result += "\n// Generated Data\n"
+        result += "static const fadingblinker_data_struct fadingblinker_data"
+        if self.store_in_flash:
+            result += " PROGMEM"
+        result += " =\n{\n"
+        result += "\tpwmData: {\n\t"
+
+        # add gamma values
+        wraparound_max = 10
+        wraparound_counter = 0
+        for value in self.output:
+            result += "\t{0},".format(value)
+
+            # add extra tab for small numbers
+            if value < 100:
+                result += "\t"
+            wraparound_counter += 1
+            if wraparound_counter >= wraparound_max:
+                result += "\n\t"
+                wraparound_counter = 0
+        result += "\n\t},\n"
+
+        # add other constants
+        result += "\ttimerTop:"
+        result += "\t\t{0},\n".format(self.top)
+
+        result += "\tholdOffCycles:"
+        result += "\t{0},\n".format(self.off_cycles)
+        result += "\tholdOnCycles:"
+        result += "\t{0},\n".format(self.on_cycles)
+        result += "\tflashCycles:"
+        result += "\t{0},\n".format(self.flash_cycles)
+        result += "\tbuzzerFreq:"
+        result += "\t\t{0}\n".format(self.tone_freq)
+
+        # add tail
+        result += "};\n\n"
+        result += "#endif\n"
+
+        # return result and print
+        if print_to_stdout:
+            print(result)
+        return result
+
+    def output_to_file(self, path):
+        with open(path, "w+") as file:
+            content = self.output_to_string()
+            file.write(content)
+
 
 # entry point for standalone execution
 if __name__ == "__main__":
-	gamma = gammacalc()
-	gamma.output_to_file("fadingblinker_data.hpp")
+    generator = GammaTableCalc()
+    generator.output_to_file("fadingblinker_data.hpp")
+    print("fadingblinker_data.hpp generated.")
