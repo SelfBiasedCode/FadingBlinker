@@ -1,8 +1,8 @@
-# FadingBlinker
+# FancyBlinker
 
 ## Summary
 
-FadingBlinker is an Arduino component to provide a smooth fading direction indicator for vehicles. Also it features a buzzer output for blinker indication.
+FancyBlinker is an Arduino component to provide a smooth fading direction indicator for vehicles. Also it features a buzzer output for blinker indication.
 It is currently tested for the Atmel ATmega328P (e.g. Arduino Nano) and the ATmega4809 (Arduino Every). It uses a python script to precalculate gamma correction tables and is optimized for performance.
 
 ## Technical Details
@@ -13,20 +13,20 @@ For the ATmega4809, TCA0 is used. This interferes with Arduino's analogWrite() f
 
 ## Usage
 ### Table Generation
-If necessary, edit the parameters in **fadingblinker_data_generator.py**, then run the script. It will create a header file **fadingblinker_data.hpp** which contains the necessary data.
+If necessary, edit the parameters in **FancyBlinker_Data_Generator.py**, then run the script. It will create a header file **FancyBlinker_Data.hpp** which contains the necessary data.
 
 ### Integration
 #### ATmega328P
-FadingBlinker requires two interrupt vectors to be registered: *TIMER1_COMPA* and *TIMER1_COMPB*. Each must call the matching function in FadingBlinker (and could also execute other code if required). Example:
+FancyBlinker requires two interrupt vectors to be registered: *TIMER1_COMPA* and *TIMER1_COMPB*. Each must call the matching function in FancyBlinker (and could also execute other code if required). Example:
 
     ISR(TIMER1_COMPA_vect)
     {
-	    FadingBlinker.timerCallbackCOMPA();
+	    FancyBlinker.timerCallbackCOMPA();
     }
     
     ISR(TIMER1_COMPB_vect)
     {
-	    FadingBlinker.timerCallbackCOMPB();
+	    FancyBlinker.timerCallbackCOMPB();
     }
 #### ATmega4809
 Similar to the 328P, two interrupt vectors must be use, though they're named OVF and CMP0:
@@ -45,7 +45,7 @@ Similar to the 328P, two interrupt vectors must be use, though they're named OVF
 
 ### Setup
 1. Instantiate the class. Parameters are the pin numbers for the left and right blinkers plus the buzzer.
-2. Call FadingBlinker.init(). This is necessary to undo any changes to the timer configuration done by Arduino. 
+2. Call FancyBlinker.init(). This is necessary to undo any changes to the timer configuration done by Arduino. 
  
 ### Control
 There are five functions available for indicator control:

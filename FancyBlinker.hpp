@@ -1,15 +1,15 @@
-#ifndef FADING_BLINKER_H
-#define FADING_BLINKER_H
+#ifndef FANCYBLINKER_H
+#define FANCYBLINKER_H
 
 #include "Arduino.h"
-#include "fadingblinker_data.hpp"
+#include "FancyBlinker_Data.hpp"
 
 // warn about unsupported architectures
 #if !(defined(__AVR_ATmega328P__)|| defined(__AVR_ATmega4809__))
 #warning Unknown platform, use at your own risk!
 #endif
 
-class FadingBlinker
+class FancyBlinker
 {
 	// forward declarations
 private:
@@ -17,7 +17,7 @@ private:
 	enum class BrightnessState : uint8_t;
 
 public:
-	FadingBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
+	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
 	{
 
 		// set direction registers
@@ -104,7 +104,7 @@ public:
 private:
 
 	/* platform dependent code */
-	
+
 #if defined(__AVR_ATmega328P__)
 
 	inline void m_setupTimer()
@@ -120,12 +120,12 @@ private:
 		TCCR1B |= (1 << WGM12);
 
 		// CTC Limit
-		OCR1A = fadingblinker_data.timerTop;
+		OCR1A = FancyBlinker_Data.timerTop;
 	}
 
 	inline void m_setCompareValue()
 	{
-		OCR1B = fadingblinker_data.pwmData[m_currTableIndex];
+		OCR1B = FancyBlinker_Data.pwmData[m_currTableIndex];
 	}
 
 #elif defined (__AVR_ATmega4809__)
@@ -136,7 +136,7 @@ private:
 		PORTMUX.TCAROUTEA &= ~(PORTMUX_TCA0_PORTB_gc);
 
 		// Set period
-		TCA0.SINGLE.PER = fadingblinker_data.timerTop;
+		TCA0.SINGLE.PER = FancyBlinker_Data.timerTop;
 
 		// Set to Single Slope PWM and synchronize register updates
 		TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc | TCA_SINGLE_ALUPD_bm;
@@ -147,9 +147,9 @@ private:
 
 	inline void m_setCompareValue()
 	{
-		TCA0.SINGLE.CMP0BUF = fadingblinker_data.pwmData[m_currTableIndex];
+		TCA0.SINGLE.CMP0BUF = FancyBlinker_Data.pwmData[m_currTableIndex];
 	}
-	
+
 #endif
 
 	/* platform independent code */
@@ -158,7 +158,7 @@ private:
 		// do not restart already running programs
 		if (newState == m_OperationState)
 			return;
-		
+
 		// reset state machine
 		m_OperationState = newState;
 
@@ -174,12 +174,12 @@ private:
 			m_brightnessState = BrightnessState::On;
 
 			// the hold counter has to be preloaded as it would usually be set during state transition
-			m_holdCounter = fadingblinker_data.flashCycles;
+			m_holdCounter = FancyBlinker_Data.flashCycles;
 		}
 		else
 		{
 			// turn buzzer on
-			tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
+			tone(m_buzzerPin, FancyBlinker_Data.buzzerFreq);
 			m_brightnessState = BrightnessState::Up;
 		}
 	}
@@ -200,8 +200,8 @@ private:
 			{
 				// this implies that ON holding time is at least 1 cycle
 				m_brightnessState = BrightnessState::On;
-				m_holdCounter = fadingblinker_data.holdOnCycles;
-				
+				m_holdCounter = FancyBlinker_Data.holdOnCycles;
+
 				// turn off buzzer
 				noTone(m_buzzerPin);
 			}
@@ -218,7 +218,7 @@ private:
 				{
 					//move to next state
 					m_brightnessState = BrightnessState::Off;
-					m_holdCounter = fadingblinker_data.flashCycles;
+					m_holdCounter = FancyBlinker_Data.flashCycles;
 				}
 				else
 				{
@@ -233,7 +233,7 @@ private:
 			{
 				// this implies that OFF holding time is at least 1 cycle
 				m_brightnessState = BrightnessState::Off;
-				m_holdCounter = fadingblinker_data.holdOffCycles;
+				m_holdCounter = FancyBlinker_Data.holdOffCycles;
 			}
 			break;
 
@@ -248,12 +248,12 @@ private:
 				{
 					//move to next state
 					m_brightnessState = BrightnessState::On;
-					m_holdCounter = fadingblinker_data.flashCycles;
+					m_holdCounter = FancyBlinker_Data.flashCycles;
 				}
 				else
 				{
 					// activate buzzer and move to next state
-					tone(m_buzzerPin, fadingblinker_data.buzzerFreq);
+					tone(m_buzzerPin, FancyBlinker_Data.buzzerFreq);
 					m_brightnessState = BrightnessState::Up;
 				}
 			}

@@ -1,10 +1,10 @@
-/* PWM values and constants for FadingBlinker */
+/* PWM values and constants for FancyBlinker */
 
-#ifndef FADINGBLINKER_DATA_H
-#define FADINGBLINKER_DATA_H
+#ifndef FANCYBLINKER_DATA_H
+#define FANCYBLINKER_DATA_H
 
 // Data Container
-struct fadingblinker_data_struct
+struct FancyBlinker_Data_Struct
 {
 	uint16_t pwmData[256];
 	uint16_t timerTop;
@@ -15,7 +15,7 @@ struct fadingblinker_data_struct
 };
 
 // Generated Data
-static const fadingblinker_data_struct fadingblinker_data =
+static const FancyBlinker_Data_Struct FancyBlinker_Data =
 {
 	pwmData: {
 		1,		1,		1,		1,		1,		1,		1,		1,		1,		1,	
