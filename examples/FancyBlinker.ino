@@ -1,11 +1,11 @@
-#include "FadingBlinker.hpp"
+#include "FancyBlinker.hpp"
 
 #define ledPin1 2
 #define ledPin2 3
 #define buzzerPin 4
 
-// instantiate FadingBlinker
-FadingBlinker blinker(ledPin1, ledPin2, buzzerPin);
+// instantiate FancyBlinker
+FancyBlinker blinker(ledPin1, ledPin2, buzzerPin);
 
 void setup()
 {

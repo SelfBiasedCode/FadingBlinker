@@ -17,7 +17,7 @@ class GammaTableCalc:
 
     def build_header(self):
         return "// Data Container\n" \
-               "struct fadingblinker_data_struct\n" \
+               "struct FancyBlinker_Data_Struct\n" \
                "{\n" \
                f"\tuint16_t pwmData[{self.indices}];\n" \
                "\tuint16_t timerTop;\n" \
@@ -48,13 +48,13 @@ class GammaTableCalc:
             self.calc()
 
         # write file head
-        result = "/* PWM values and constants for FadingBlinker */\n\n"
-        result += "#ifndef FADINGBLINKER_DATA_H\n"
-        result += "#define FADINGBLINKER_DATA_H\n"
+        result = "/* PWM values and constants for FancyBlinker */\n\n"
+        result += "#ifndef FANCYBLINKER_DATA_H\n"
+        result += "#define FANCYBLINKER_DATA_H\n"
         result += "\n"
         result += self.build_header()
         result += "\n// Generated Data\n"
-        result += "static const fadingblinker_data_struct fadingblinker_data"
+        result += "static const FancyBlinker_Data_Struct FancyBlinker_Data"
         if self.store_in_flash:
             result += " PROGMEM"
         result += " =\n{\n"
@@ -106,5 +106,5 @@ class GammaTableCalc:
 # entry point for standalone execution
 if __name__ == "__main__":
     generator = GammaTableCalc()
-    generator.output_to_file("fadingblinker_data.hpp")
-    print("fadingblinker_data.hpp generated.")
+    generator.output_to_file("FancyBlinker_Data.hpp")
+    print("FancyBlinker_Data.hpp generated.")
