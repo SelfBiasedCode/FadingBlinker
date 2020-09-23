@@ -68,17 +68,23 @@ class GammaTableCalc:
 
         return self.output
 
-    def build_header(self):
-        return "// Data Container\n" \
-               "struct FancyBlinker_Data_Struct\n" \
-               "{\n" \
-               f"\tuint16_t pwmData[{self.indices}];\n" \
-               "\tuint16_t timerTop;\n" \
-               "\tuint8_t holdOffCycles;\n" \
-               "\tuint8_t holdOnCycles;\n" \
-               "\tuint8_t flashCycles;\n" \
-               "\tuint16_t beeperFreq;\n" \
-               "};\n"
+    def build_struct_declaration(self):
+        result = "// Data Container\n" \
+                 "struct FancyBlinker_Data_Struct\n" \
+                 "{\n" \
+                 f"\tuint16_t pwmData[{self.indices}];\n" \
+                 "\tuint16_t timerTop;\n" \
+                 "\tuint8_t holdOffCycles;\n" \
+                 "\tuint8_t holdOnCycles;\n" \
+                 "\tuint8_t flashCycles;\n"
+
+        # add beeper freq member only if beeper is enabled
+        if self.beeper_freq > 0:
+            result += "\tuint16_t beeperFreq;\n"
+
+        result += "};\n"
+
+        return result
 
     def output_to_string(self, print_to_stdout=False):
         # if data has not been calculated yet, do so
@@ -97,7 +103,7 @@ class GammaTableCalc:
         result += "\n\n"
 
         # write data structures
-        result += self.build_header()
+        result += self.build_struct_declaration()
         result += "\n// Generated Data\n"
         result += "static const FancyBlinker_Data_Struct FancyBlinker_Data"
         if self.store_in_flash:
@@ -130,8 +136,11 @@ class GammaTableCalc:
         result += "\t{0},\n".format(self.on_cycles)
         result += "\tflashCycles:"
         result += "\t{0},\n".format(self.flash_cycles)
-        result += "\tbeeperFreq:"
-        result += "\t\t{0}\n".format(self.beeper_freq)
+
+        # add beeper freq member only if beeper is enabled
+        if self.beeper_freq > 0:
+            result += "\tbeeperFreq:"
+            result += "\t\t{0}\n".format(self.beeper_freq)
 
         # add tail
         result += "};\n\n"
