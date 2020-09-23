@@ -17,6 +17,10 @@ private:
 	enum class BrightnessState : uint8_t;
 
 public:
+
+	// different constructors are used with and without beeper functionality
+#if FB_BEEPER_ENABLED
+
 	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t beeperPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_beeperPin(beeperPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
 	{
 
@@ -28,6 +32,22 @@ public:
 		digitalWrite(m_leftPin, LOW);
 		digitalWrite(m_rightPin, LOW);
 	}
+
+#else
+
+	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
+	{
+
+		// set direction registers
+		pinMode(m_leftPin, OUTPUT);
+		pinMode(m_rightPin, OUTPUT);
+
+		// set initial state
+		digitalWrite(m_leftPin, LOW);
+		digitalWrite(m_rightPin, LOW);
+	}
+
+#endif
 
 	inline void init()
 	{
@@ -280,7 +300,9 @@ private:
 	// pin assignments
 	uint8_t m_leftPin;
 	uint8_t m_rightPin;
+#if FB_BEEPER_ENABLED
 	uint8_t m_beeperPin;
+#endif
 
 	// direction state
 	OperationState m_OperationState;
