@@ -3,6 +3,8 @@
 #ifndef FANCYBLINKER_DATA_H
 #define FANCYBLINKER_DATA_H
 
+#define FB_BEEPER_ENABLED 1
+
 // Data Container
 struct FancyBlinker_Data_Struct
 {
@@ -11,7 +13,7 @@ struct FancyBlinker_Data_Struct
 	uint8_t holdOffCycles;
 	uint8_t holdOnCycles;
 	uint8_t flashCycles;
-	uint16_t buzzerFreq;
+	uint16_t beeperFreq;
 };
 
 // Generated Data
@@ -49,7 +51,7 @@ static const FancyBlinker_Data_Struct FancyBlinker_Data =
 	holdOffCycles:	75,
 	holdOnCycles:	75,
 	flashCycles:	32,
-	buzzerFreq:		440
+	beeperFreq:		440
 };
 
 #endif

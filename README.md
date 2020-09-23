@@ -6,7 +6,8 @@ FancyBlinker is an Arduino component to provide a smooth fading direction indica
 It is currently tested for the Atmel ATmega328P (e.g. Arduino Nano) and the ATmega4809 (Arduino Every). It uses a python script to precalculate gamma correction tables and is optimized for performance.
 
 ## Technical Details
-This component is written fully inline to maximize execution speed, especially for the ISRs. ISRs have to be defined outside this component, making sure that interrupt vectors aren't spread all over the final code. PWM tables are **not** written to *progmem* to minimize read delays during ISRs execution. 
+This component is written fully inline to maximize execution speed, especially for the ISRs. ISRs have to be defined outside this component, making sure that interrupt vectors aren't spread all over the final code. PWM tables are **not** written to *progmem* to minimize read delays during ISRs execution.
+Different constructors for enabled/disabled beeper functionality are implemented to both optimize memory footprint and give direct feedback to the programmer - if the beeper is disabled, but a beeper pin is supplied (or vice versa), the code will not compile.
 
 ### Limitations
 For the ATmega4809, TCA0 is used. This interferes with Arduino's analogWrite() function. Sadly the Arduino framework takes hold of TCA0, TCB0, TCB2 and possibly more timers in such a way that there is no way to run Soft-PWM at an acceptable frequency on a free TCB timer. **As a result, analogWrite() will not work on the ATmega 4809 (e.g. Arduino Every)**.
@@ -14,6 +15,7 @@ For the ATmega4809, TCA0 is used. This interferes with Arduino's analogWrite() f
 ## Usage
 ### Table Generation
 If necessary, edit the parameters in **FancyBlinker_Data_Generator.py**, then run the script. It will create a header file **FancyBlinker_Data.hpp** which contains the necessary data.
+Beeper functionality will be enabled if a beeper frequency greater than 0 Hz is set in the script. Set it to 0 to disable this function. Note that this will change the constructor signature of FadingBlinker.
 
 ### Integration
 #### ATmega328P

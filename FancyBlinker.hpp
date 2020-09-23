@@ -17,7 +17,11 @@ private:
 	enum class BrightnessState : uint8_t;
 
 public:
-	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t buzzerPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_buzzerPin(buzzerPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
+
+	// different constructors are used with and without beeper functionality
+#if FB_BEEPER_ENABLED
+
+	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin, uint8_t beeperPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_beeperPin(beeperPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
 	{
 
 		// set direction registers
@@ -28,6 +32,22 @@ public:
 		digitalWrite(m_leftPin, LOW);
 		digitalWrite(m_rightPin, LOW);
 	}
+
+#else
+
+	FancyBlinker(uint8_t ledLeftPin, uint8_t ledRightPin) : m_leftPin(ledLeftPin), m_rightPin(ledRightPin), m_OperationState(OperationState::Inactive), m_brightnessState(BrightnessState::Up)
+	{
+
+		// set direction registers
+		pinMode(m_leftPin, OUTPUT);
+		pinMode(m_rightPin, OUTPUT);
+
+		// set initial state
+		digitalWrite(m_leftPin, LOW);
+		digitalWrite(m_rightPin, LOW);
+	}
+
+#endif
 
 	inline void init()
 	{
@@ -165,12 +185,15 @@ private:
 		// reset dimming index
 		m_currTableIndex = 0x00;
 
-
 		// initialize state machine depending on operation mode
 		if (m_OperationState == OperationState::Flash)
 		{
+			
+#if FB_BEEPER_ENABLED
 			// turn buzzer off
-			noTone(m_buzzerPin);
+			noTone(m_beeperPin);
+#endif
+			// move to next state
 			m_brightnessState = BrightnessState::On;
 
 			// the hold counter has to be preloaded as it would usually be set during state transition
@@ -178,8 +201,12 @@ private:
 		}
 		else
 		{
+
+#if FB_BEEPER_ENABLED
 			// turn buzzer on
-			tone(m_buzzerPin, FancyBlinker_Data.buzzerFreq);
+			tone(m_beeperPin, FancyBlinker_Data.beeperFreq);
+
+#endif
 			m_brightnessState = BrightnessState::Up;
 		}
 	}
@@ -202,13 +229,14 @@ private:
 				m_brightnessState = BrightnessState::On;
 				m_holdCounter = FancyBlinker_Data.holdOnCycles;
 
+#if FB_BEEPER_ENABLED
 				// turn off buzzer
-				noTone(m_buzzerPin);
+				noTone(m_beeperPin);
+#endif
 			}
 			break;
 
 		case BrightnessState::On:
-
 			// always decrement counter: one cycle has already passed since the transition from UP
 			m_holdCounter--;
 			if (m_holdCounter == 0)
@@ -238,7 +266,6 @@ private:
 			break;
 
 		case BrightnessState::Off:
-
 			// always decrement counter: one cycle has already passed since the transition from DOWN
 			m_holdCounter--;
 			if (m_holdCounter == 0)
@@ -252,8 +279,13 @@ private:
 				}
 				else
 				{
-					// activate buzzer and move to next state
-					tone(m_buzzerPin, FancyBlinker_Data.buzzerFreq);
+
+#if FB_BEEPER_ENABLED
+					// activate buzzer
+					tone(m_beeperPin, FancyBlinker_Data.beeperFreq);
+#endif
+
+					//  move to next state
 					m_brightnessState = BrightnessState::Up;
 				}
 			}
@@ -275,7 +307,10 @@ private:
 	// pin assignments
 	uint8_t m_leftPin;
 	uint8_t m_rightPin;
-	uint8_t m_buzzerPin;
+
+#if FB_BEEPER_ENABLED
+	uint8_t m_beeperPin;
+#endif
 
 	// direction state
 	OperationState m_OperationState;
