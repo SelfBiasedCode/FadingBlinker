@@ -47,6 +47,12 @@ class GammaTableCalc:
             print("WARNING: Beeper frequency is set to less than 31 Hz. According to the Arduino tone() "
                   "documentation, this is not possible. Please refer to Arduino docs for more information.")
 
+        # information
+        if self.beeper_freq > 0:
+            print("Beeper functionality enabled.")
+        else:
+            print("Beeper functionality disabled.")
+
     def calc(self):
         # calculate parameters
         max_index = self.indices - 1
@@ -84,6 +90,13 @@ class GammaTableCalc:
         result += "#ifndef FANCYBLINKER_DATA_H\n"
         result += "#define FANCYBLINKER_DATA_H\n"
         result += "\n"
+
+        # write defines
+        result += "#define FB_BEEPER_ENABLED "
+        result += "1" if self.beeper_freq > 0 else "0"
+        result += "\n\n"
+
+        # write data structures
         result += self.build_header()
         result += "\n// Generated Data\n"
         result += "static const FancyBlinker_Data_Struct FancyBlinker_Data"
