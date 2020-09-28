@@ -79,6 +79,15 @@ public:
 	{
 		// timer reset is not necessary for deactivation
 		m_OperationState = OperationState::Inactive;
+
+		// turn off blinkers
+		digitalWrite(m_leftPin, LOW);
+		digitalWrite(m_rightPin, LOW);
+
+#if FB_BEEPER_ENABLED
+		// turn off beeper
+		noTone(m_beeperPin);
+#endif
 	}
 
 	void inline timerCallbackCOMPA()
@@ -107,8 +116,11 @@ public:
 			}
 		}
 
-		// always advance timer
-		m_advanceTimer();
+		// always advance timer while operating
+		if (m_OperationState != OperationState::Inactive)
+		{
+			m_advanceTimer();
+		}
 	}
 
 	void inline timerCallbackCOMPB()
@@ -188,7 +200,7 @@ private:
 		// initialize state machine depending on operation mode
 		if (m_OperationState == OperationState::Flash)
 		{
-			
+
 #if FB_BEEPER_ENABLED
 			// turn buzzer off
 			noTone(m_beeperPin);
@@ -213,9 +225,6 @@ private:
 
 	inline void m_advanceTimer()
 	{
-		if (m_OperationState == OperationState::Inactive)
-			return;
-
 		// set timer value for current state
 		m_setCompareValue();
 
