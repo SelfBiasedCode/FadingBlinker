@@ -2,7 +2,7 @@ import math
 
 
 class GammaTableCalc:
-    def __init__(self, minimum=0x01, top=0x0300, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles=32,
+    def __init__(self, minimum=0x01, top=0x0150, gamma=2.2, off_cycles=75, on_cycles=75, flash_cycles=32,
                  beeper_frequency_hz=440):
         bits_in = 8
         self.indices = math.floor(math.pow(2, bits_in))
@@ -43,7 +43,7 @@ class GammaTableCalc:
         if self.gamma == 0:
             print("WARNING: Gamma correction set to 0. No correction will be performed.")
 
-        if self.beeper_freq < 31:
+        if self.beeper_freq > 0 and self.beeper_freq < 31:
             print("WARNING: Beeper frequency is set to less than 31 Hz. According to the Arduino tone() "
                   "documentation, this is not possible. Please refer to Arduino docs for more information.")
 
